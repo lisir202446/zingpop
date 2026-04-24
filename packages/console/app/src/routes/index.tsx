@@ -1,10 +1,11 @@
 import "./index.css"
 import { Title, Meta } from "@solidjs/meta"
+import type { APIEvent } from "@solidjs/start/server"
 //import { HttpHeader } from "@solidjs/start"
 import video from "../asset/lander/opencode-min.mp4"
 import videoPoster from "../asset/lander/opencode-poster.png"
 import { IconCopy, IconCheck } from "../component/icon"
-import { A, createAsync } from "@solidjs/router"
+import { A, createAsync, redirect } from "@solidjs/router"
 import { EmailSignup } from "~/component/email-signup"
 import { Tabs } from "@kobalte/core/tabs"
 import { Faq } from "~/component/faq"
@@ -12,10 +13,15 @@ import { Header } from "~/component/header"
 import { Footer } from "~/component/footer"
 import { Legal } from "~/component/legal"
 import { github } from "~/lib/github"
+import { rootRedirectLocation } from "~/lib/root-redirect"
 import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 import { LocaleLinks } from "~/component/locale-links"
+
+export async function GET(input: APIEvent) {
+  return redirect(rootRedirectLocation(input.request))
+}
 
 function CopyStatus() {
   return (

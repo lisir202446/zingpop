@@ -1,18 +1,9 @@
-import logoLight from "../asset/logo-ornate-light.svg"
-import logoDark from "../asset/logo-ornate-dark.svg"
 import copyLogoLight from "../asset/lander/logo-light.svg"
 import copyLogoDark from "../asset/lander/logo-dark.svg"
 import copyWordmarkLight from "../asset/lander/wordmark-light.svg"
 import copyWordmarkDark from "../asset/lander/wordmark-dark.svg"
 import copyBrandAssetsLight from "../asset/lander/brand-assets-light.svg"
 import copyBrandAssetsDark from "../asset/lander/brand-assets-dark.svg"
-
-// SVG files for copying (separate from button icons)
-// Replace these with your actual SVG files for copying
-import copyLogoSvgLight from "../asset/lander/opencode-logo-light.svg"
-import copyLogoSvgDark from "../asset/lander/opencode-logo-dark.svg"
-import copyWordmarkSvgLight from "../asset/lander/opencode-wordmark-light.svg"
-import copyWordmarkSvgDark from "../asset/lander/opencode-wordmark-dark.svg"
 import { A, createAsync, useNavigate } from "@solidjs/router"
 import { createMemo, Match, Show, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -101,7 +92,7 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
   const copyWordmarkToClipboard = async () => {
     try {
       const isDark = isDarkMode()
-      const wordmarkSvgPath = isDark ? copyWordmarkSvgDark : copyWordmarkSvgLight
+      const wordmarkSvgPath = isDark ? copyWordmarkDark : copyWordmarkLight
       const wordmarkSvg = await fetchSvgContent(wordmarkSvgPath)
       await navigator.clipboard.writeText(wordmarkSvg)
     } catch (err) {
@@ -112,7 +103,7 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
   const copyLogoToClipboard = async () => {
     try {
       const isDark = isDarkMode()
-      const logoSvgPath = isDark ? copyLogoSvgDark : copyLogoSvgLight
+      const logoSvgPath = isDark ? copyLogoDark : copyLogoLight
       const logoSvg = await fetchSvgContent(logoSvgPath)
       await navigator.clipboard.writeText(logoSvg)
     } catch (err) {
@@ -124,8 +115,7 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
     <section data-component="top">
       <div onContextMenu={handleLogoContextMenu}>
         <A href={language.route("/")}>
-          <img data-slot="logo light" src={logoLight} alt={i18n.t("nav.logoAlt")} width="189" height="34" />
-          <img data-slot="logo dark" src={logoDark} alt={i18n.t("nav.logoAlt")} width="189" height="34" />
+          <span data-slot="brand">{i18n.t("nav.logoAlt")}</span>
         </A>
       </div>
 

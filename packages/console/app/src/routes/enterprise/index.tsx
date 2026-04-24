@@ -1,4 +1,4 @@
-import "./index.css"
+﻿import "./index.css"
 import { Title, Meta } from "@solidjs/meta"
 import { createSignal, Show } from "solid-js"
 import { Header } from "~/component/header"
@@ -94,7 +94,7 @@ export default function Enterprise() {
                         />
                       </svg>
                     </div>
-                    Thanks to OpenCode, we found a way to create software to track all our assets — even the imaginary
+                    Thanks to Zingpop, we found a way to create software to track all our assets 鈥?even the imaginary
                     ones.
                     <div data-component="testimonial-logo">
                       <svg width="80" height="79" viewBox="0 0 80 79" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -282,3 +282,4 @@ export default function Enterprise() {
     </main>
   )
 }
+

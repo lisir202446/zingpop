@@ -23,7 +23,7 @@ import { assertAlipayConfigured, assertWechatConfigured, quoteDomesticPayment, r
 import { createWechatOrder, decryptWechatNotification, verifyWechatNotification } from "./pay/wechat"
 
 export namespace Billing {
-  export const ITEM_CREDIT_NAME = "opencode credits"
+  export const ITEM_CREDIT_NAME = "Zingpop credits"
   export const ITEM_FEE_NAME = "processing fee"
   export const RELOAD_AMOUNT = 20
   export const RELOAD_AMOUNT_MIN = 10
@@ -41,7 +41,7 @@ export namespace Billing {
   }
 
   function subjectFor(type: "credit" | "lite", amount: number) {
-    if (type === "lite") return "opencode lite"
+    if (type === "lite") return "Zingpop Lite"
     return `${ITEM_CREDIT_NAME} ${amount}`
   }
 

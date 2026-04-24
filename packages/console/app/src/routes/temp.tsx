@@ -1,8 +1,6 @@
 import "./index.css"
 import { Title } from "@solidjs/meta"
 import { onCleanup, onMount } from "solid-js"
-import logoLight from "../asset/logo-ornate-light.svg"
-import logoDark from "../asset/logo-ornate-dark.svg"
 import IMG_SPLASH from "../asset/lander/screenshot-splash.png"
 import { IconCopy, IconCheck } from "../component/icon"
 import { useI18n } from "~/context/i18n"
@@ -47,8 +45,7 @@ export default function Home() {
 
       <div data-component="content">
         <section data-component="top">
-          <img data-slot="logo light" src={logoLight} alt={i18n.t("temp.logoLightAlt")} />
-          <img data-slot="logo dark" src={logoDark} alt={i18n.t("temp.logoDarkAlt")} />
+          <span data-slot="brand">{i18n.t("nav.logoAlt")}</span>
           <h1 data-slot="title">{i18n.t("temp.hero.title")}</h1>
           <div data-slot="login">
             <a href="/auth">{i18n.t("temp.zen")}</a>

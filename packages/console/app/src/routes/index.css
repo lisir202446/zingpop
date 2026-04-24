@@ -207,6 +207,21 @@ body {
       width: auto;
     }
 
+    [data-slot="brand"] {
+      display: inline-flex;
+      align-items: center;
+      color: var(--color-text-strong);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.08em;
+      line-height: 1;
+      text-decoration: none;
+
+      @media (max-width: 40rem) {
+        font-size: 1.6rem;
+      }
+    }
+
     [data-component="nav-desktop"] {
       ul {
         display: flex;
@@ -329,18 +344,6 @@ body {
       }
     }
 
-    [data-slot="logo dark"] {
-      display: none;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      [data-slot="logo light"] {
-        display: none;
-      }
-      [data-slot="logo dark"] {
-        display: block;
-      }
-    }
   }
 
   [data-component="hero"] {
