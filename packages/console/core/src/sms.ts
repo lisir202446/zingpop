@@ -1,6 +1,16 @@
 import { createHash, randomUUID } from "node:crypto"
 import { Phone } from "./phone"
 
+function configured(env: Record<string, string | undefined>) {
+  return Boolean(
+    env.HUAWEI_SMS_ENDPOINT &&
+      env.HUAWEI_SMS_APP_KEY &&
+      env.HUAWEI_SMS_APP_SECRET &&
+      env.HUAWEI_SMS_SENDER &&
+      env.HUAWEI_SMS_TEMPLATE_ID,
+  )
+}
+
 function env(name: string) {
   const value = process.env[name]
   if (!value) throw new Error("SMS service is not configured")
@@ -27,6 +37,14 @@ function wsse(appKey: string, appSecret: string) {
 }
 
 export namespace SMS {
+  export function isConfigured(env = process.env) {
+    return configured(env)
+  }
+
+  export function allowDevelopmentFallback(input: { stage: string; env?: Record<string, string | undefined> }) {
+    return input.stage === "development" && !isConfigured(input.env ?? process.env)
+  }
+
   export function assertConfigured() {
     config()
   }

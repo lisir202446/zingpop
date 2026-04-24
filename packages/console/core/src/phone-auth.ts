@@ -51,7 +51,6 @@ export namespace PhoneAuth {
       ip: z.string().optional(),
     }),
     async (input) => {
-      SMS.assertConfigured()
       const phone = Phone.normalize(input.phone)
       const now = new Date()
       const latestCode = await Database.use((tx) =>
@@ -89,6 +88,9 @@ export namespace PhoneAuth {
       })
 
       const code = generateLoginCode()
+      const useDevelopmentFallback = SMS.allowDevelopmentFallback({
+        stage: Resource.App.stage,
+      })
 
       await Database.use((tx) =>
         tx.insert(LoginCodeTable).values({
@@ -99,6 +101,8 @@ export namespace PhoneAuth {
           ip: input.ip,
         }),
       )
+
+      if (useDevelopmentFallback) return { phone, devCode: code }
 
       await SMS.sendLoginCode({ phone, code })
 

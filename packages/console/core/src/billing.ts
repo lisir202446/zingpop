@@ -19,7 +19,15 @@ import { User } from "./user"
 import { BlackData } from "./black"
 import { LiteData } from "./lite"
 import { createAlipayOrder, verifyAlipayNotification } from "./pay/alipay"
-import { assertAlipayConfigured, assertWechatConfigured, quoteDomesticPayment, resolveDomesticPaymentConfig, type DomesticPaymentProvider } from "./pay/config"
+import {
+  allowDevelopmentPaymentFallback,
+  assertAlipayConfigured,
+  assertWechatConfigured,
+  buildDevelopmentCheckoutUrl,
+  quoteDomesticPayment,
+  resolveDomesticPaymentConfig,
+  type DomesticPaymentProvider,
+} from "./pay/config"
 import { createWechatOrder, decryptWechatNotification, verifyWechatNotification } from "./pay/wechat"
 
 export namespace Billing {
@@ -80,6 +88,29 @@ export namespace Billing {
 
     try {
       if (input.provider === "alipay") {
+        if (
+          allowDevelopmentPaymentFallback({
+            stage: Resource.App.stage,
+            provider: input.provider,
+            config,
+          })
+        ) {
+          await markPaymentPaid({
+            orderID,
+            channel: input.provider,
+            paymentID: `dev_${orderID}`,
+            paidFen: quote.chargeFen,
+            payload: {
+              mode: "development",
+              provider: input.provider,
+            },
+          })
+          return buildDevelopmentCheckoutUrl({
+            successUrl: input.successUrl,
+            orderID,
+            provider: input.provider,
+          })
+        }
         assertAlipayConfigured(config)
         return await createAlipayOrder({
           subject: subjectFor(input.type, input.amount),
@@ -87,6 +118,30 @@ export namespace Billing {
           chargeFen: quote.chargeFen,
           returnUrl: input.successUrl,
           mobile: input.mobile,
+        })
+      }
+
+      if (
+        allowDevelopmentPaymentFallback({
+          stage: Resource.App.stage,
+          provider: input.provider,
+          config,
+        })
+      ) {
+        await markPaymentPaid({
+          orderID,
+          channel: input.provider,
+          paymentID: `dev_${orderID}`,
+          paidFen: quote.chargeFen,
+          payload: {
+            mode: "development",
+            provider: input.provider,
+          },
+        })
+        return buildDevelopmentCheckoutUrl({
+          successUrl: input.successUrl,
+          orderID,
+          provider: input.provider,
         })
       }
 

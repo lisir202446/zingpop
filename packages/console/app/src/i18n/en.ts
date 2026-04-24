@@ -58,6 +58,7 @@ export const dict = {
   "auth.phone.verifyCode": "Sign in",
   "auth.phone.verifyingCode": "Signing in...",
   "auth.phone.codeSent": "Verification code sent to {{phone}}",
+  "auth.phone.devCode": "Development code: {{code}}",
 
   "workspace.select": "Select workspace",
   "workspace.createNew": "+ Create New Workspace",

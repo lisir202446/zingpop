@@ -770,6 +770,7 @@ export const dict = {
   "auth.phone.verifyCode": "\u767b\u5f55",
   "auth.phone.verifyingCode": "\u767b\u5f55\u4e2d...",
   "auth.phone.codeSent": "\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\u81f3 {{phone}}",
+  "auth.phone.devCode": "\u5f00\u53d1\u9a8c\u8bc1\u7801\uff1a{{code}}",
   "error.phoneRequired": "\u8bf7\u8f93\u5165\u624b\u673a\u53f7",
   "error.phoneInvalid": "\u8bf7\u8f93\u5165\u6709\u6548\u7684\u4e2d\u56fd\u5927\u9646\u624b\u673a\u53f7",
   "error.codeRequired": "\u8bf7\u8f93\u5165\u9a8c\u8bc1\u7801",

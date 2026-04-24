@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import { createCipheriv, generateKeyPairSync } from "node:crypto"
 import { decryptWechatResource, signAlipayPayload, verifyAlipayPayload, signWechatMessage, verifyWechatMessage } from "../src/pay/crypto"
+import {
+  allowDevelopmentPaymentFallback,
+  buildDevelopmentCheckoutUrl,
+  resolveDomesticPaymentConfig,
+} from "../src/pay/config"
 
 describe("domestic payment crypto helpers", () => {
   test("signs and verifies alipay payloads", () => {
@@ -47,5 +52,36 @@ describe("domestic payment crypto helpers", () => {
         ciphertext: encrypted,
       }),
     ).toBe(plaintext.toString())
+  })
+
+  test("uses a local payment fallback when development providers are missing", () => {
+    const config = resolveDomesticPaymentConfig({})
+
+    expect(
+      allowDevelopmentPaymentFallback({
+        stage: "development",
+        provider: "alipay",
+        config,
+      }),
+    ).toBe(true)
+    expect(
+      allowDevelopmentPaymentFallback({
+        stage: "development",
+        provider: "wechat",
+        config,
+      }),
+    ).toBe(true)
+  })
+
+  test("builds a local checkout url for development payment completion", () => {
+    expect(
+      buildDevelopmentCheckoutUrl({
+        successUrl: "https://example.com/workspace/wrk_123/billing",
+        orderID: "pay_123",
+        provider: "wechat",
+      }),
+    ).toBe(
+      "https://example.com/workspace/wrk_123/billing?checkout=dev&order=pay_123&provider=wechat",
+    )
   })
 })

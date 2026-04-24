@@ -140,6 +140,9 @@ export default function PhoneAuthPage() {
               </div>
             )}
           </Show>
+          <Show when={sendSubmission.result && "data" in sendSubmission.result ? sendSubmission.result.data.devCode : undefined}>
+            {(code) => <div data-slot="form-success">{i18n.t("auth.phone.devCode", { code: code() })}</div>}
+          </Show>
           <button type="submit" data-color="primary" disabled={sendSubmission.pending}>
             {sendSubmission.pending ? i18n.t("auth.phone.sendingCode") : i18n.t("auth.phone.sendCode")}
           </button>

@@ -6,6 +6,7 @@ import {
 } from "../src/phone-auth"
 import { AuthProvider } from "../src/schema/auth.sql"
 import { Phone } from "../src/phone"
+import { SMS } from "../src/sms"
 
 describe("phone login", () => {
   test("supports phone auth provider", () => {
@@ -52,5 +53,23 @@ describe("phone login", () => {
         now: new Date("2026-04-23T10:06:00.000Z"),
       }),
     ).toThrow("Too many invalid verification attempts")
+  })
+
+  test("allows a development fallback when sms is not configured", () => {
+    expect(
+      SMS.allowDevelopmentFallback({
+        stage: "development",
+        env: {},
+      }),
+    ).toBe(true)
+  })
+
+  test("requires real sms configuration outside development fallback", () => {
+    expect(
+      SMS.allowDevelopmentFallback({
+        stage: "production",
+        env: {},
+      }),
+    ).toBe(false)
   })
 })
