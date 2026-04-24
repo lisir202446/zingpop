@@ -69,10 +69,15 @@ This redesign does not:
 - Explain implementation details of `skill`, `mcp`, or plugins
 - Add brand-new backend product features
 - Redesign the overall site visual language away from the existing `opencode` feel
+- Rebuild the homepage from scratch if the existing `opencode` marketing structure can be reused
 
 ## Visual Direction
 
 The homepage should preserve the editorial, restrained, trustworthy tone of the existing `opencode` marketing site.
+
+The default implementation rule is:
+
+`Reuse the existing opencode homepage design language as much as possible, and change content and visual assets first.`
 
 Keep:
 
@@ -91,6 +96,16 @@ Avoid:
 - Feature-grid overload without narrative structure
 
 The page should feel like the same family as `opencode`, but with warmer beginner-facing messaging.
+
+This redesign should prefer content replacement over visual reinvention.
+
+That means:
+
+- Reuse existing homepage section rhythm where possible
+- Reuse existing shared components before introducing new ones
+- Reuse existing CSS patterns before adding new visual systems
+- Prefer swapping copy, illustrations, and screenshots over rebuilding layout primitives
+- Only make style changes when the current presentation blocks the beginner-facing positioning
 
 ## Homepage Structure
 
@@ -327,6 +342,13 @@ Prefer reusing existing marketing-site components and styling patterns where the
 
 Do not force reuse where the old copy structure is strongly developer-specific. Reuse layout and tone first, content second.
 
+Implementation priority should be:
+
+1. Reuse the existing `opencode` homepage layout and section framing
+2. Replace copy to match Zingpop beginner positioning
+3. Replace media and visual assets to match Zingpop examples
+4. Add new structural or styling code only where reuse clearly fails
+
 ## Asset Strategy
 
 Homepage visuals for the case-study section should be added as curated assets rather than generated live at request time in the browser.
@@ -352,6 +374,7 @@ The redesign is successful when:
 7. Garbled text is fully removed.
 8. Homepage body content returns to the i18n system.
 9. The ending structure includes FAQ, email signup, footer, and legal sections.
+10. The implementation mostly reuses `opencode` homepage structure and design patterns, with changes focused on content and assets rather than a wholesale visual rewrite.
 
 ## Verification Plan
 
