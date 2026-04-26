@@ -1,6 +1,7 @@
 import type { Locale } from "~/lib/language"
 import { dict as en } from "~/i18n/en"
 import { dict as zh } from "~/i18n/zh"
+import { dict as zhHome } from "~/i18n/zh-home"
 import { dict as zht } from "~/i18n/zht"
 import { dict as ko } from "~/i18n/ko"
 import { dict as de } from "~/i18n/de"
@@ -24,7 +25,7 @@ const base = en satisfies Dict
 
 export function i18n(locale: Locale): Dict {
   if (locale === "en") return base
-  if (locale === "zh") return { ...base, ...zh }
+  if (locale === "zh") return { ...base, ...zh, ...zhHome }
   if (locale === "zht") return { ...base, ...zht }
   if (locale === "ko") return { ...base, ...ko }
   if (locale === "de") return { ...base, ...de }

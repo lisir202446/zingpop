@@ -5,19 +5,16 @@ import { useI18n } from "~/context/i18n"
 
 const emailSignup = action(async (formData: FormData) => {
   "use server"
-  const emailAddress = formData.get("email")!
-  const listId = "8b9bb82c-9d5f-11f0-975f-0df6fd1e4945"
-  const response = await fetch(`https://api.emailoctopus.com/lists/${listId}/contacts`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${Resource.EMAILOCTOPUS_API_KEY.value}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email_address: emailAddress,
+  const email = formData.get("email")?.toString().trim().toLowerCase()
+  if (!email || !email.includes("@")) throw new Error("Invalid email address")
+  await Resource.GatewayKv.put(
+    `waitlist:email:${email}`,
+    JSON.stringify({
+      email,
+      source: "console-email-signup",
+      createdAt: new Date().toISOString(),
     }),
-  })
-  console.log(response)
+  )
   return true
 })
 

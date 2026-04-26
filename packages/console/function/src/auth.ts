@@ -25,6 +25,7 @@ type Env = {
 export const subjects = createSubjects({
   account: z.object({
     accountID: z.string(),
+    login: z.string(),
     email: z.string(),
   }),
   user: z.object({
@@ -196,7 +197,7 @@ export default {
         })()
 
         // Get workspace
-        await Actor.provide("account", { accountID, email }, async () => {
+        await Actor.provide("account", { accountID, login: email, email }, async () => {
           await User.joinInvitedWorkspaces()
           const workspaces = await Database.use((tx) =>
             tx
@@ -215,7 +216,7 @@ export default {
             await Workspace.create({ name: "Default" })
           }
         })
-        return ctx.subject("account", accountID, { accountID, email })
+        return ctx.subject("account", accountID, { accountID, login: email, email })
       },
     }).fetch(request, env, ctx)
     return result

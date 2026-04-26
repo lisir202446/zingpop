@@ -41,7 +41,7 @@ const createWorkspace = action(async (form: FormData) => {
   if (name?.trim()) {
     return withActor(async () => {
       const workspaceID = await Workspace.create({ name: name.trim() })
-      return redirect(`/workspace/${workspaceID}`)
+      return redirect(`/workspace/${workspaceID}/home`)
     })
   }
 }, "createWorkspace")
@@ -73,7 +73,7 @@ export function WorkspacePicker() {
 
   const handleSelectWorkspace = (workspaceID: string) => {
     if (workspaceID === params.id) return
-    window.location.href = `/workspace/${workspaceID}`
+    window.location.href = `/workspace/${workspaceID}/home`
   }
 
   // Reset signals when workspace ID changes

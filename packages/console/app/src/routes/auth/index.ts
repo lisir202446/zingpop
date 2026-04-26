@@ -9,7 +9,7 @@ export async function GET(input: APIEvent) {
   const locale = localeFromRequest(input.request)
   try {
     const workspaceID = await getLastSeenWorkspaceID()
-    if (workspaceID) return redirect(route(locale, `/workspace/${workspaceID}`))
+    if (workspaceID) return redirect(route(locale, `/workspace/${workspaceID}/home`))
   } catch {
     return redirect(authIndexRedirectLocation(input.request))
   }

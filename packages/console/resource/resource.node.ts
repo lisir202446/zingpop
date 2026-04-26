@@ -92,6 +92,8 @@ function defaultLimits() {
   })
 }
 
+const localDevSessionSecret = "local-dev-session-secret-0123456789"
+
 function defaultModels() {
   return JSON.stringify({
     zenModels: {
@@ -161,7 +163,7 @@ function fallbackResource(prop: string) {
   if (prop === "ZEN_SESSION_SECRET") {
     return {
       type: "sst.sst.Secret",
-      value: env("ZEN_SESSION_SECRET") ?? env("SESSION_SECRET") ?? "local-dev-session-secret",
+      value: env("ZEN_SESSION_SECRET") ?? env("SESSION_SECRET") ?? localDevSessionSecret,
     }
   }
   if (prop === "ZEN_LIMITS") {

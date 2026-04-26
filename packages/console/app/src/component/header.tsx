@@ -4,12 +4,9 @@ import copyWordmarkLight from "../asset/lander/wordmark-light.svg"
 import copyWordmarkDark from "../asset/lander/wordmark-dark.svg"
 import copyBrandAssetsLight from "../asset/lander/brand-assets-light.svg"
 import copyBrandAssetsDark from "../asset/lander/brand-assets-dark.svg"
-import { A, createAsync, useNavigate } from "@solidjs/router"
-import { createMemo, Match, Show, Switch } from "solid-js"
+import { A, useNavigate } from "@solidjs/router"
+import { Match, Show, Switch, createEffect, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
-import { github } from "~/lib/github"
-import { createEffect, onCleanup } from "solid-js"
-import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 import "./header-context-menu.css"
@@ -27,20 +24,20 @@ const fetchSvgContent = async (svgPath: string): Promise<string> => {
   }
 }
 
-export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: boolean }) {
+export function Header(props: {
+  zen?: boolean
+  go?: boolean
+  hideGetStarted?: boolean
+  hideEnterprise?: boolean
+  ctaHref?: string
+  ctaLabel?: string
+}) {
   const navigate = useNavigate()
   const i18n = useI18n()
   const language = useLanguage()
-  const githubData = createAsync(() => github())
-  const starCount = createMemo(() =>
-    githubData()?.stars
-      ? new Intl.NumberFormat("en-US", {
-          notation: "compact",
-          compactDisplay: "short",
-          maximumFractionDigits: 0,
-        }).format(githubData()?.stars)
-      : config.github.starsFormatted.compact,
-  )
+  const ctaHref = props.ctaHref ?? language.route("/download")
+  const ctaLabel = props.ctaLabel ?? i18n.t("nav.free")
+  const useDefaultCtaIcon = !props.ctaHref && !props.ctaLabel
 
   const [store, setStore] = createStore({
     mobileMenuOpen: false,
@@ -144,11 +141,6 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
       <nav data-component="nav-desktop">
         <ul>
           <li>
-            <a href={config.github.repoUrl} target="_blank" style="white-space: nowrap;">
-              {i18n.t("nav.github")} <span>[{starCount()}]</span>
-            </a>
-          </li>
-          <li>
             <a href={language.route("/docs")}>{i18n.t("nav.docs")}</a>
           </li>
           <li>
@@ -157,9 +149,6 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
           <li>
             <A href={language.route("/go")}>{i18n.t("nav.go")}</A>
           </li>
-          <li>
-            <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
-          </li>
           <Show when={props.zen || props.go}>
             <li>
               <a href="/auth">{i18n.t("nav.login")}</a>
@@ -167,23 +156,25 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
           </Show>
           <Show when={!props.hideGetStarted}>
             <li>
-              <A href={language.route("/download")} data-slot="cta-button">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 18 18"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style="flex-shrink: 0;"
-                >
-                  <path
-                    d="M12.1875 9.75L9.00001 12.9375L5.8125 9.75M9.00001 2.0625L9 12.375M14.4375 15.9375H3.5625"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="square"
-                  />
-                </svg>
-                {i18n.t("nav.free")}
+              <A href={ctaHref} data-slot="cta-button">
+                <Show when={useDefaultCtaIcon}>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style="flex-shrink: 0;"
+                  >
+                    <path
+                      d="M12.1875 9.75L9.00001 12.9375L5.8125 9.75M9.00001 2.0625L9 12.375M14.4375 15.9375H3.5625"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="square"
+                    />
+                  </svg>
+                </Show>
+                {ctaLabel}
               </A>
             </li>
           </Show>
@@ -241,11 +232,6 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
                   <A href={language.route("/")}>{i18n.t("nav.home")}</A>
                 </li>
                 <li>
-                  <a href={config.github.repoUrl} target="_blank" style="white-space: nowrap;">
-                    {i18n.t("nav.github")} <span>[{starCount()}]</span>
-                  </a>
-                </li>
-                <li>
                   <a href={language.route("/docs")}>{i18n.t("nav.docs")}</a>
                 </li>
                 <Show when={!props.zen}>
@@ -258,9 +244,6 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
                     <A href={language.route("/go")}>{i18n.t("nav.go")}</A>
                   </li>
                 </Show>
-                <li>
-                  <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
-                </li>
                 <Show when={props.zen || props.go}>
                   <li>
                     <a href="/auth">{i18n.t("nav.login")}</a>
@@ -268,8 +251,8 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
                 </Show>
                 <Show when={!props.hideGetStarted}>
                   <li>
-                    <A href={language.route("/download")} data-slot="cta-button">
-                      {i18n.t("nav.getStartedFree")}
+                    <A href={ctaHref} data-slot="cta-button">
+                      {ctaLabel}
                     </A>
                   </li>
                 </Show>

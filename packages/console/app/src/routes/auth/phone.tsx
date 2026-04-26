@@ -89,7 +89,7 @@ const verifyCode = action(async (form: FormData) => {
       }))
 
       const locale = localeFromRequest(request)
-      return redirect(route(locale, next || `/workspace/${workspaceID}`))
+      return redirect(route(locale, next || `/workspace/${workspaceID}/home`))
     })
     .catch((error: Error) => ({ error: error.message }))
 }, "auth.phone.verify")

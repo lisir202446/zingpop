@@ -1,0 +1,103 @@
+diff --git a/dist/config/index.js b/dist/config/index.js
+index 69e8f80..f36b9b5 100644
+--- a/dist/config/index.js
++++ b/dist/config/index.js
+@@ -12,6 +12,7 @@ import lazy from "./lazy.js";
+ import { manifest } from "./manifest.js";
+ import { parseIdQuery } from "./utils.js";
+ const absolute = (path, root) => path ? (isAbsolute(path) ? path : join(root, path)) : path;
++const toModulePath = (path) => path.replaceAll("\\", "/");
+ export function solidStart(options) {
+     const start = defu(options ?? {}, {
+         appRoot: "./src",
+@@ -115,7 +116,7 @@ export function solidStart(options) {
+                     define: {
+                         "import.meta.env.MANIFEST": `globalThis.MANIFEST`,
+                         "import.meta.env.START_SSR": JSON.stringify(start.ssr),
+-                        "import.meta.env.START_APP_ENTRY": `"${appEntryPath}"`,
++                        "import.meta.env.START_APP_ENTRY": JSON.stringify(toModulePath(appEntryPath)),
+                         "import.meta.env.START_CLIENT_ENTRY": `"${handlers.client}"`,
+                         "import.meta.env.START_DEV_OVERLAY": JSON.stringify(start.devOverlay)
+                     },
+@@ -163,19 +164,19 @@ export function solidStart(options) {
+                 {
+                     envConsumer: "client",
+                     envName: VITE_ENVIRONMENTS.client,
+-                    getRuntimeCode: () => `import { createServerReference } from "${normalize(fileURLToPath(new URL("../server/server-runtime", import.meta.url)))}"`,
++                    getRuntimeCode: () => `import { createServerReference } from "${toModulePath(normalize(fileURLToPath(new URL("../server/server-runtime", import.meta.url))))}"`,
+                     replacer: opts => `createServerReference('${opts.functionId}')`
+                 },
+                 {
+                     envConsumer: "server",
+                     envName: VITE_ENVIRONMENTS.server,
+-                    getRuntimeCode: () => `import { createServerReference } from '${normalize(fileURLToPath(new URL("../server/server-fns-runtime", import.meta.url)))}'`,
++                    getRuntimeCode: () => `import { createServerReference } from '${toModulePath(normalize(fileURLToPath(new URL("../server/server-fns-runtime", import.meta.url))))}'`,
+                     replacer: opts => `createServerReference(${opts.fn}, '${opts.functionId}')`
+                 }
+             ],
+             provider: {
+                 envName: VITE_ENVIRONMENTS.server,
+-                getRuntimeCode: () => `import { createServerReference } from '${normalize(fileURLToPath(new URL("../server/server-fns-runtime", import.meta.url)))}'`,
++                getRuntimeCode: () => `import { createServerReference } from '${toModulePath(normalize(fileURLToPath(new URL("../server/server-fns-runtime", import.meta.url))))}'`,
+                 replacer: opts => `createServerReference(${opts.fn}, '${opts.functionId}')`
+             }
+         }),
+diff --git a/dist/config/manifest.js b/dist/config/manifest.js
+index 6015d8f..32663be 100644
+--- a/dist/config/manifest.js
++++ b/dist/config/manifest.js
+@@ -1,5 +1,7 @@
+ import { findStylesInModuleGraph } from "../server/collect-styles.js";
++import { fileURLToPath } from "node:url";
+ import { VIRTUAL_MODULES } from "./constants.js";
++const toResolvePath = (path) => fileURLToPath(new URL(path, import.meta.url)).replaceAll("\\", "/");
+ export function manifest(start) {
+     let devServer = undefined;
+     return {
+@@ -12,11 +14,11 @@ export function manifest(start) {
+             if (id === VIRTUAL_MODULES.clientViteManifest)
+                 return `\0${VIRTUAL_MODULES.clientViteManifest}`;
+             if (id === VIRTUAL_MODULES.getClientManifest)
+-                return this.resolve(new URL("../server/manifest/client-manifest", import.meta.url).pathname);
++                return this.resolve(toResolvePath("../server/manifest/client-manifest"));
+             if (id === VIRTUAL_MODULES.getManifest) {
+                 return this.environment.config.consumer === "client"
+-                    ? this.resolve(new URL("../server/manifest/client-manifest", import.meta.url).pathname)
+-                    : this.resolve(new URL("../server/manifest/ssr-manifest", import.meta.url).pathname);
++                    ? this.resolve(toResolvePath("../server/manifest/client-manifest"))
++                    : this.resolve(toResolvePath("../server/manifest/ssr-manifest"));
+             }
+             if (id === VIRTUAL_MODULES.middleware) {
+                 if (start.middleware)
+diff --git a/dist/config/fs-routes/router.js b/dist/config/fs-routes/router.js
+index 96e0e97..fdf2fdf 100644
+--- a/dist/config/fs-routes/router.js
++++ b/dist/config/fs-routes/router.js
+@@ -11,6 +11,7 @@ export const glob = (path) => fg.sync(path, { absolute: true });
+ export function cleanPath(src, config) {
+     return src
+         .slice(config.dir.length)
++        .replaceAll("\\", "/")
+         .replace(new RegExp(`\.(${(config.extensions ?? []).join("|")})$`), "");
+ }
+ export function analyzeModule(src) {
+diff --git a/dist/config/fs-router.js b/dist/config/fs-router.js
+index 2b48df8..1f9ef95 100644
+--- a/dist/config/fs-router.js
++++ b/dist/config/fs-router.js
+@@ -5,6 +5,7 @@ export class SolidStartClientFileRouter extends BaseFileSystemRouter {
+             // remove the initial slash
+             .slice(1)
+             .replace(/index$/, "")
++            .replace(/\/$/, "")
+             .replace(/\[([^/]+)\]/g, (_, m) => {
+             if (m.length > 3 && m.startsWith("...")) {
+                 return `*${m.slice(3)}`;
+@@ -94,6 +95,7 @@ export class SolidStartServerFileRouter extends BaseFileSystemRouter {
+             // remove the initial slash
+             .slice(1)
+             .replace(/index$/, "")
++            .replace(/\/$/, "")
+             .replace(/\[([^/]+)\]/g, (_, m) => {
+             if (m.length > 3 && m.startsWith("...")) {
+                 return `*${m.slice(3)}`;

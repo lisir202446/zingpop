@@ -9,7 +9,7 @@ import { querySessionInfo, queryBillingInfo, createCheckoutUrl, formatBalance } 
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 
-export default function () {
+export default function WorkspaceHome() {
   const params = useParams()
   const i18n = useI18n()
   const language = useLanguage()

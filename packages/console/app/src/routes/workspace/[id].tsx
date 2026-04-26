@@ -16,11 +16,14 @@ export default function WorkspaceLayout(props: RouteSectionProps) {
         <nav data-component="workspace-nav">
           <nav data-component="nav-desktop">
             <div data-component="workspace-nav-items">
-              <A href={`/workspace/${params.id}`} end activeClass="active" data-nav-button>
+              <A href={`/workspace/${params.id}/home`} end activeClass="active" data-nav-button>
                 {i18n.t("workspace.nav.zen")}
               </A>
               <A href={`/workspace/${params.id}/go`} activeClass="active" data-nav-button>
                 {i18n.t("workspace.nav.go")}
+              </A>
+              <A href={`/workspace/${params.id}/inspiration`} activeClass="active" data-nav-button>
+                {i18n.t("workspace.nav.inspiration")}
               </A>
               <A href={`/workspace/${params.id}/usage`} activeClass="active" data-nav-button>
                 {i18n.t("workspace.nav.usage")}
@@ -44,11 +47,14 @@ export default function WorkspaceLayout(props: RouteSectionProps) {
 
           <nav data-component="nav-mobile">
             <div data-component="workspace-nav-items">
-              <A href={`/workspace/${params.id}`} end activeClass="active" data-nav-button>
+              <A href={`/workspace/${params.id}/home`} end activeClass="active" data-nav-button>
                 {i18n.t("workspace.nav.zen")}
               </A>
               <A href={`/workspace/${params.id}/go`} activeClass="active" data-nav-button>
                 {i18n.t("workspace.nav.go")}
+              </A>
+              <A href={`/workspace/${params.id}/inspiration`} activeClass="active" data-nav-button>
+                {i18n.t("workspace.nav.inspiration")}
               </A>
               <A href={`/workspace/${params.id}/usage`} activeClass="active" data-nav-button>
                 {i18n.t("workspace.nav.usage")}
