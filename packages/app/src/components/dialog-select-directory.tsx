@@ -112,8 +112,16 @@ function toRow(absolute: string, home: string, group: Row["group"]): Row {
     return value + "/"
   }
 
+  const backslash = (value: string) => value.replaceAll("/", "\\")
   const search = Array.from(
-    new Set([full, withSlash(full), tilde, withSlash(tilde), getFilename(full)].filter(Boolean)),
+    new Set(
+      [
+        full, withSlash(full),
+        backslash(full), backslash(withSlash(full)),
+        tilde, withSlash(tilde),
+        getFilename(full),
+      ].filter(Boolean),
+    ),
   ).join("\n")
   return { absolute: full, search, group }
 }
@@ -310,11 +318,16 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
       })
   })
 
-  const items = async (value: string) => {
-    const results = await directories(value)
-    const directoryRows = results.map((absolute) => toRow(absolute, home(), "folders"))
-    return uniqueRows([...recentProjects(), ...directoryRows])
-  }
+  // Re-create the items function whenever start() resolves so the List
+  // createResource source re-tracks and refetches automatically.
+  const items = createMemo(() => {
+    start() // track start() — new function reference when it changes
+    return async (value: string) => {
+      const results = await directories(value)
+      const directoryRows = results.map((absolute) => toRow(absolute, home(), "folders"))
+      return uniqueRows([...recentProjects(), ...directoryRows])
+    }
+  })
 
   function resolve(absolute: string) {
     props.onSelect(props.multiple ? [absolute] : absolute)
@@ -327,7 +340,7 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
         search={{ placeholder: language.t("dialog.directory.search.placeholder"), autofocus: true }}
         emptyMessage={language.t("dialog.directory.empty")}
         loadingMessage={language.t("common.loading")}
-        items={items}
+        items={items()}
         key={(x) => x.absolute}
         filterKeys={["search"]}
         groupBy={(item) => item.group}
