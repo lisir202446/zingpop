@@ -165,8 +165,15 @@ state.dict = build(state.locale)
 
 const translate = i18n.translator(() => state.dict, i18n.resolveTemplate)
 
+function brandDisplay(value: string) {
+  return value
+    .replaceAll("OpenCode", "Zingpop")
+    .replaceAll("Discord", "Zingpop Support")
+    .replaceAll("opencode.ai/zen", "zingpop.ai/zen")
+}
+
 export function t(key: keyof Dictionary, params?: Record<string, string | number>) {
-  return translate(key, params)
+  return brandDisplay(translate(key, params))
 }
 
 export function initI18n(): Promise<Locale> {

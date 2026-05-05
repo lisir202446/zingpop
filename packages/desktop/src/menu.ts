@@ -15,7 +15,7 @@ export async function createMenu(trigger: (id: string) => void) {
   const menu = await Menu.new({
     items: [
       await Submenu.new({
-        text: t("desktop.menu.app"),
+        text: "Zingpop",
         items: [
           await PredefinedMenuItem.new({
             item: { About: null },
@@ -158,12 +158,12 @@ export async function createMenu(trigger: (id: string) => void) {
         items: [
           // missing native macos search
           await MenuItem.new({
-            action: () => openUrl("https://opencode.ai/docs"),
-            text: t("desktop.menu.help.documentation"),
+            action: () => openUrl("https://zingpop.ai/docs"),
+            text: "Zingpop Documentation",
           }),
           await MenuItem.new({
-            action: () => openUrl("https://discord.com/invite/opencode"),
-            text: t("desktop.menu.help.supportForum"),
+            action: () => openUrl("https://zingpop.ai/support"),
+            text: "Zingpop Support",
           }),
           await PredefinedMenuItem.new({
             item: "Separator",
@@ -175,11 +175,11 @@ export async function createMenu(trigger: (id: string) => void) {
             item: "Separator",
           }),
           await MenuItem.new({
-            action: () => openUrl("https://github.com/anomalyco/opencode/issues/new?template=feature_request.yml"),
+            action: () => openUrl("https://zingpop.ai/feedback"),
             text: t("desktop.menu.help.shareFeedback"),
           }),
           await MenuItem.new({
-            action: () => openUrl("https://github.com/anomalyco/opencode/issues/new?template=bug_report.yml"),
+            action: () => openUrl("https://zingpop.ai/support"),
             text: t("desktop.menu.help.reportBug"),
           }),
         ],

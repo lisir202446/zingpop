@@ -173,7 +173,40 @@ function markCodeLinks(root: HTMLDivElement) {
   }
 }
 
+function brandDisplay(root: HTMLDivElement) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement
+      if (!parent) return NodeFilter.FILTER_REJECT
+      if (parent.closest("code, pre, kbd, samp")) return NodeFilter.FILTER_REJECT
+      return NodeFilter.FILTER_ACCEPT
+    },
+  })
+  const nodes: Text[] = []
+  while (walker.nextNode()) {
+    const node = walker.currentNode
+    if (node instanceof Text) nodes.push(node)
+  }
+  for (const node of nodes) {
+    node.data = node.data
+      .replaceAll("https://opencode.ai", "https://zingpop.ai")
+      .replaceAll("http://opencode.ai", "https://zingpop.ai")
+      .replaceAll("OpenCode", "Zingpop")
+      .replace(/(?<![\w-])opencode(?![\w.-])/gi, "Zingpop")
+  }
+  for (const link of Array.from(root.querySelectorAll("a"))) {
+    if (!(link instanceof HTMLAnchorElement)) continue
+    if (link.href.startsWith("https://opencode.ai")) {
+      link.href = link.href.replace("https://opencode.ai", "https://zingpop.ai")
+    }
+    if (link.href.startsWith("http://opencode.ai")) {
+      link.href = link.href.replace("http://opencode.ai", "https://zingpop.ai")
+    }
+  }
+}
+
 function decorate(root: HTMLDivElement, labels: CopyLabels) {
+  brandDisplay(root)
   const blocks = Array.from(root.querySelectorAll("pre"))
   for (const block of blocks) {
     ensureCodeWrapper(block, labels)

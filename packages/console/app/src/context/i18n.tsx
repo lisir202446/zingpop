@@ -3,13 +3,23 @@ import { createSimpleContext } from "@opencode-ai/ui/context"
 import { i18n, type Key } from "~/i18n"
 import { useLanguage } from "~/context/language"
 
+function brandDisplay(text: string) {
+  return text
+    .replaceAll("OpenCode", "Zingpop")
+    .replaceAll("opencode.ai/discord", "zingpop.ai/support")
+    .replaceAll("https://opencode.ai", "https://zingpop.ai")
+    .replaceAll("http://opencode.ai", "https://zingpop.ai")
+}
+
 function resolve(text: string, params?: Record<string, string | number>) {
-  if (!params) return text
-  return text.replace(/\{\{(\w+)\}\}/g, (raw, key) => {
-    const value = params[key]
-    if (value === undefined || value === null) return raw
-    return String(value)
-  })
+  if (!params) return brandDisplay(text)
+  return brandDisplay(
+    text.replace(/\{\{(\w+)\}\}/g, (raw, key) => {
+      const value = params[key]
+      if (value === undefined || value === null) return raw
+      return String(value)
+    }),
+  )
 }
 
 export const { use: useI18n, provider: I18nProvider } = createSimpleContext({

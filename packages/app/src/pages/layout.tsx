@@ -13,7 +13,7 @@ import {
   type Accessor,
 } from "solid-js"
 import { makeEventListener } from "@solid-primitives/event-listener"
-import { useNavigate, useParams } from "@solidjs/router"
+import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { useLayout, LocalProject } from "@/context/layout"
 import { useGlobalSync } from "@/context/global-sync"
 import { Persist, persisted } from "@/utils/persist"
@@ -119,6 +119,7 @@ export default function Layout(props: ParentProps) {
   const server = useServer()
   const notification = useNotification()
   const permission = usePermission()
+  const location = useLocation()
   const navigate = useNavigate()
   setNavigate(navigate)
   const providers = useProviders()
@@ -317,6 +318,16 @@ export default function Layout(props: ParentProps) {
     clearSidebarHoverState()
     navigate(href)
     layout.mobileSidebar.hide()
+  }
+
+  const promptsActive = createMemo(() => {
+    if (!params.dir) return false
+    return location.pathname.replace(/\/+$/, "") === `/${params.dir}/prompts`
+  })
+
+  const openPrompts = () => {
+    if (!params.dir) return
+    navigateWithSidebarReset(`/${params.dir}/prompts`)
   }
 
   function cycleTheme(direction = 1) {
@@ -2345,12 +2356,15 @@ export default function Layout(props: ParentProps) {
       openProjectLabel={language.t("command.project.open")}
       openProjectKeybind={() => command.keybind("project.open")}
       onOpenProject={chooseProject}
+      promptsLabel={() => "提示词模板库"}
+      promptsActive={promptsActive}
+      onOpenPrompts={openPrompts}
       renderProjectOverlay={projectOverlay}
       settingsLabel={() => language.t("sidebar.settings")}
       settingsKeybind={() => command.keybind("settings.open")}
       onOpenSettings={openSettings}
       helpLabel={() => language.t("sidebar.help")}
-      onOpenHelp={() => platform.openLink("https://opencode.ai/desktop-feedback")}
+      onOpenHelp={() => platform.openLink("https://zingpop.ai/support")}
       renderPanel={() =>
         mobile ? <SidebarPanel project={currentProject} mobile /> : <SidebarPanel project={currentProject} merged />
       }

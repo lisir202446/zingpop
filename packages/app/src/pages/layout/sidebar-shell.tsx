@@ -24,6 +24,9 @@ export const SidebarContent = (props: {
   openProjectLabel: JSX.Element
   openProjectKeybind: Accessor<string | undefined>
   onOpenProject: () => void
+  promptsLabel: Accessor<string>
+  promptsActive: Accessor<boolean>
+  onOpenPrompts: () => void
   renderProjectOverlay: () => JSX.Element
   settingsLabel: Accessor<string>
   settingsKeybind: Accessor<string | undefined>
@@ -90,6 +93,18 @@ export const SidebarContent = (props: {
           </DragDropProvider>
         </div>
         <div class="shrink-0 w-full pt-3 pb-6 flex flex-col items-center gap-2">
+          <Tooltip placement={placement()} value={props.promptsLabel()}>
+            <IconButton
+              icon="prompt"
+              variant="ghost"
+              size="large"
+              class="rounded-md"
+              classList={{ "bg-surface-base-active": props.promptsActive() }}
+              onClick={props.onOpenPrompts}
+              aria-label={props.promptsLabel()}
+              aria-current={props.promptsActive() ? "page" : undefined}
+            />
+          </Tooltip>
           <TooltipKeybind placement={placement()} title={props.settingsLabel()} keybind={props.settingsKeybind() ?? ""}>
             <IconButton
               icon="settings-gear"

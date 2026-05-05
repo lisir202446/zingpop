@@ -1,6 +1,7 @@
 import "./index.css"
 import { Meta, Title } from "@solidjs/meta"
 import { A } from "@solidjs/router"
+import { createSignal } from "solid-js"
 import caseArt from "../asset/home/case-art.png"
 import caseGame from "../asset/home/case-game.png"
 import caseSite from "../asset/home/case-site.png"
@@ -31,6 +32,15 @@ export default function Home() {
   const i18n = useI18n()
   const language = useLanguage()
   const authHref = language.route("/auth/phone")
+  const [heroVideoMuted, setHeroVideoMuted] = createSignal(true)
+  let heroVideo: HTMLVideoElement | undefined
+
+  const toggleHeroVideoSound = () => {
+    if (!heroVideo) return
+    heroVideo.muted = !heroVideoMuted()
+    setHeroVideoMuted(heroVideo.muted)
+    heroVideo.play()
+  }
 
   const renderCasePreview = (caseID: (typeof caseIDs)[number]) => (
     <div data-slot="case-window" data-case={caseID}>
@@ -105,6 +115,25 @@ export default function Home() {
                 </a>
               </div>
               <p data-slot="hero-note">{i18n.t("home.hero.note")}</p>
+              <div data-slot="hero-video">
+                <video
+                  ref={heroVideo}
+                  src="/mascot-showcase.mp4"
+                  autoplay
+                  loop
+                  muted={heroVideoMuted()}
+                  playsinline
+                  preload="metadata"
+                />
+                <button
+                  type="button"
+                  data-slot="hero-video-sound"
+                  onClick={toggleHeroVideoSound}
+                  aria-label={heroVideoMuted() ? "打开声音" : "关闭声音"}
+                >
+                  {heroVideoMuted() ? "打开声音" : "关闭声音"}
+                </button>
+              </div>
             </div>
 
             <div data-slot="starter-board">

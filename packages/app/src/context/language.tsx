@@ -96,6 +96,13 @@ const LABEL_KEY: Record<Locale, keyof Dictionary> = {
 const base = i18n.flatten({ ...en, ...uiEn })
 const dicts = new Map<Locale, Dictionary>([["en", base]])
 
+function brandDisplay(value: string) {
+  return value
+    .replaceAll("OpenCode", "Zingpop")
+    .replaceAll("Discord", "Zingpop Support")
+    .replaceAll("opencode.ai/zen", "zingpop.ai/zen")
+}
+
 const merge = (app: Promise<Source>, ui: Promise<Source>) =>
   Promise.all([app, ui]).then(([a, b]) => ({ ...base, ...i18n.flatten({ ...a.dict, ...b.dict }) }) as Dictionary)
 
@@ -208,10 +215,12 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
       initialValue: dicts.get(initial) ?? base,
     })
 
-    const t = i18n.translator(() => dict() ?? base, i18n.resolveTemplate) as (
+    const translate = i18n.translator(() => dict() ?? base, i18n.resolveTemplate) as (
       key: keyof Dictionary,
       params?: Record<string, string | number | boolean>,
     ) => string
+    const t = (key: keyof Dictionary, params?: Record<string, string | number | boolean>) =>
+      brandDisplay(translate(key, params))
 
     const label = (value: Locale) => t(LABEL_KEY[value])
 
