@@ -30,6 +30,58 @@ Use the existing opencode production build and embedded Web UI for the workbench
 - Use `/srv/zingpop/workspaces/default` for single-tenant staging only.
 - Before public multi-user launch, add product-level user accounts, project ownership, and authorization/isolation checks.
 
+## Pre-ICP launch preparation
+
+Date: 2026-05-07
+
+Do not use an unfiled replacement domain before ICP is complete. Until ICP filing allows public domain traffic, keep domain access disabled and use the server public IP only for internal testing.
+
+Current pre-ICP work plan:
+
+- Run the production build on the server:
+
+```bash
+cd /root/zingpop
+chmod +x scripts/production-build.sh scripts/install-systemd.sh
+./scripts/production-build.sh
+```
+
+- Confirm the Linux opencode binary builds successfully.
+- Install and start the systemd service:
+
+```bash
+./scripts/install-systemd.sh
+systemctl enable --now zingpop-opencode
+systemctl status zingpop-opencode --no-pager
+```
+
+- Configure `/etc/zingpop/zingpop.env` before starting production service.
+- The production workbench backend should listen on `127.0.0.1:4096`, not public `0.0.0.0:4096`.
+- Continue internal IP testing with:
+
+```text
+http://121.36.58.22:3000
+http://121.36.58.22:3001
+http://121.36.58.22:4096
+```
+
+- Test phone registration, phone-password login, and forgot-password reset:
+
+```text
+Register: phone + SMS code + password
+Login: phone + password
+Forgot password: phone + SMS code + new password
+```
+
+- Verify Huawei Cloud SMS templates, signature, Access Key, and environment variables can send codes.
+- Prepare Nginx configs under `/etc/nginx/sites-available` and run `nginx -t`, but do not enable public domain traffic before ICP is ready.
+- Final production security group should expose only `80` and `443`; restrict SSH `22` to the user's fixed IP. Keep `3000`, `3001`, and `4096` public only during temporary internal testing.
+- Prepare user agreement, privacy policy, data processing notes, third-party open-source notices, and dependency license audit.
+- Continue multi-user isolation design before public launch:
+  - Define where each user's project directory lives.
+  - Define who can access each project, session, and file.
+  - Prevent users from entering raw server paths such as `/root/zingpop`.
+
 ## Product login decision
 
 Date: 2026-05-06

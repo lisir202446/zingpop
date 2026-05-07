@@ -40,6 +40,111 @@ http://localhost:4096
 http://121.36.58.22:4096
 ```
 
+## Pre-ICP Work Plan
+
+Do not use an unfiled replacement domain while ICP filing is still pending. Until Huawei Cloud allows public domain use, keep `www.zingpop.cn`, `app.zingpop.cn`, and any unfiled replacement domain disabled for public traffic. Continue with internal IP testing and production preparation.
+
+### 1. Production Build Validation
+
+Run on the server:
+
+```bash
+cd /root/zingpop
+chmod +x scripts/production-build.sh scripts/install-systemd.sh
+./scripts/production-build.sh
+```
+
+Confirm the opencode Linux binary builds successfully.
+
+### 2. systemd Service Installation
+
+Configure `/etc/zingpop/zingpop.env`, then install and start the service:
+
+```bash
+./scripts/install-systemd.sh
+systemctl enable --now zingpop-opencode
+systemctl status zingpop-opencode --no-pager
+```
+
+The workbench backend target is:
+
+```text
+127.0.0.1:4096
+```
+
+It should not listen publicly on:
+
+```text
+0.0.0.0:4096
+```
+
+### 3. Internal IP Testing
+
+Continue internal testing with:
+
+```text
+http://121.36.58.22:3000
+http://121.36.58.22:3001
+http://121.36.58.22:4096
+```
+
+Temporary Nginx-by-IP testing is acceptable, but do not publicly advertise or enable unfiled domain traffic.
+
+### 4. Phone Auth Testing
+
+The code and `account_password` table are now in place. Test the full flows:
+
+```text
+Register: phone + SMS verification code + password
+Login: phone + password
+Forgot password: phone + SMS verification code + new password
+```
+
+Also verify Huawei Cloud SMS templates, signature, Access Key, and environment variables can send verification codes.
+
+### 5. Nginx Preparation
+
+Prepare templates under `/etc/nginx/sites-available` and validate syntax:
+
+```bash
+nginx -t
+```
+
+Do not enable certificate-backed domain traffic until ICP is ready.
+
+### 6. Security Group Plan
+
+Final production exposure should be:
+
+```text
+80
+443
+```
+
+Restrict SSH `22` to the user's fixed IP. Keep `3000`, `3001`, and `4096` public only for temporary internal testing, and close them before production.
+
+### 7. Legal And Commercial Materials
+
+Prepare these while waiting for ICP:
+
+```text
+User agreement
+Privacy policy
+Data processing notes
+Third-party open-source notices
+Dependency license audit
+```
+
+### 8. Multi-User Isolation Design
+
+This is the largest public-launch risk. Before public multi-user use, define:
+
+```text
+Where each user's project directory lives
+Who can access each project/session/file
+How to prevent users from entering raw server paths such as /root/zingpop
+```
+
 ## Remaining Work
 
 ### 1. Domain
@@ -197,6 +302,12 @@ Before commercial launch:
 ## Minimum Production Checklist
 
 - [ ] ICP filing is complete before public domain use.
+- [ ] No unfiled replacement domain is used for public traffic before ICP is complete.
+- [ ] Production build has been validated on the server with `scripts/production-build.sh`.
+- [ ] `zingpop-opencode` is installed and started through systemd.
+- [ ] Workbench backend listens on `127.0.0.1:4096`, not public `0.0.0.0:4096`.
+- [ ] Phone registration, phone-password login, and forgot-password reset are tested on the server.
+- [ ] Huawei Cloud SMS templates, signature, Access Key, and environment variables are verified.
 - [ ] Domain is configured.
 - [ ] HTTPS certificate is active.
 - [ ] Nginx/reverse proxy is configured.
@@ -213,13 +324,17 @@ Before commercial launch:
 - [x] Workbench service can use the opencode production build instead of Vite dev.
 - [x] Workbench backend has a systemd service template.
 - [ ] Server reboot restores all services automatically.
+- [ ] Production security group exposes only `80` and `443`; SSH `22` is restricted to a fixed IP.
+- [ ] Public access to `3000`, `3001`, and `4096` is removed before production.
 - [ ] Original MIT license and copyright notices are retained.
 - [ ] Dependency license audit is complete.
+- [ ] Third-party open-source notices are ready.
 - [ ] Third-party service/model/API terms are reviewed.
 - [ ] Zingpop branding replaces user-facing opencode branding where appropriate.
 - [ ] User agreement and privacy policy are ready.
+- [ ] Data processing notes are ready.
 
-## Temporary Dev Commands
+## Temporary IP Test Commands
 
 Use these only for the current test server setup:
 

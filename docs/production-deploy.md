@@ -45,6 +45,8 @@ The opencode build creates a Linux binary under:
 packages/opencode/dist/opencode-linux-x64/bin/opencode
 ```
 
+Confirm this binary exists before continuing.
+
 ## Install systemd Guard
 
 Run on the server:
@@ -160,5 +162,23 @@ This is acceptable for a protected single-tenant staging service. It is not enou
 While ICP filing is pending:
 
 - Keep using public IP and dev ports for internal testing.
+- Do not use an unfiled replacement domain for public traffic.
 - Keep the certificate files, but do not enable domain traffic if Huawei Cloud told you not to use the domain.
 - Prepare scripts, services, and Nginx templates without binding the domain publicly.
+- You may copy Nginx templates into `/etc/nginx/sites-available` and run `nginx -t`, but wait for ICP before enabling public domain traffic.
+- Continue testing the current internal IP endpoints:
+
+```text
+http://121.36.58.22:3000
+http://121.36.58.22:3001
+http://121.36.58.22:4096
+```
+
+- Test phone registration, phone-password login, and forgot-password reset after the `account_password` migration is applied.
+- Verify Huawei Cloud SMS templates, signature, Access Key, and environment variables before relying on SMS login.
+- Before production, expose only `80` and `443`; restrict SSH `22` to the user's fixed IP and close public access to `3000`, `3001`, and `4096`.
+- Prepare user agreement, privacy policy, data processing notes, third-party open-source notices, and dependency license audit during the ICP waiting period.
+- Continue multi-user isolation design before public launch:
+  - Define each user's project directory.
+  - Define access checks for project, session, and file.
+  - Prevent users from entering raw server paths such as `/root/zingpop`.
