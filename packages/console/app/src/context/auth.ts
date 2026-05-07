@@ -27,6 +27,8 @@ export function useAuthSession() {
     cookie: {
       secure: import.meta.env.PROD,
       httpOnly: true,
+      domain: process.env.AUTH_COOKIE_DOMAIN || undefined,
+      sameSite: "lax",
     },
   })
 }
