@@ -4,6 +4,14 @@
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
 
+## Zingpop Integration Boundary
+
+- Do not change opencode's reusable runtime/core behavior unless the user explicitly approves that specific low-level change.
+- Productionization work must be additive around the existing opencode runtime: use configuration, deployment scripts, Nginx, systemd, environment variables, wrapper scripts, docs, or Zingpop-only layers first.
+- Before changing files under `packages/opencode/src`, check whether opencode already provides the needed capability. If it does, reuse it instead of modifying it.
+- Any change must preserve the existing opencode bottom-layer run path. Do not break `packages/opencode` CLI/server behavior, SDK generation, project/session/file routing, or desktop/web runtime assumptions.
+- If a required feature cannot be implemented without changing opencode core behavior, stop and explain the tradeoff before editing.
+
 ## Style Guide
 
 ### General Principles

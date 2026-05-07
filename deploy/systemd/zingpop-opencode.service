@@ -1,0 +1,29 @@
+[Unit]
+Description=Zingpop opencode workbench backend
+Documentation=https://www.zingpop.cn
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zingpop
+Group=zingpop
+EnvironmentFile=/etc/zingpop/zingpop.env
+WorkingDirectory=/srv/zingpop/workspaces/default
+ExecStart=/bin/sh -lc 'exec "$ZINGPOP_OPENCODE_BIN" serve --hostname 127.0.0.1 --port "$ZINGPOP_PORT"'
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/zingpop /var/log/zingpop /home/zingpop
+
+StandardOutput=append:/var/log/zingpop/opencode.log
+StandardError=append:/var/log/zingpop/opencode.err.log
+
+[Install]
+WantedBy=multi-user.target

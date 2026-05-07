@@ -1,5 +1,69 @@
 # Zingpop Memory
 
+## Opencode integration boundary
+
+Date: 2026-05-06
+
+Hard rule for all future work: do not change opencode's reusable bottom-layer runtime/core behavior unless the user explicitly approves that exact low-level change.
+
+- Reuse existing opencode capabilities whenever available.
+- Prefer additive Zingpop-side work: configuration, deployment scripts, Nginx, systemd, environment variables, wrapper scripts, docs, or Zingpop-only integration layers.
+- Before editing `packages/opencode/src`, check whether opencode already has the needed capability.
+- Preserve the existing opencode CLI/server run path, SDK generation, project/session/file routing, desktop runtime, and web runtime assumptions.
+- If a production feature cannot be completed without opencode core changes, stop and explain the tradeoff before editing.
+
+## Production deployment path
+
+Date: 2026-05-06
+
+Use the existing opencode production build and embedded Web UI for the workbench:
+
+- Workbench production host should be `https://app.zingpop.cn`.
+- Product home should be `https://www.zingpop.cn`.
+- `app.zingpop.cn` should proxy to local `127.0.0.1:4096`.
+- The current `www.zingpop.cn` certificate does not cover `app.zingpop.cn`; issue a separate app cert or a wildcard cert after ICP allows domain use.
+- The browser workbench auto-connects by using `location.origin`; users should not manually add `localhost:4096` or `121.36.58.22:4096`.
+- Keep domain traffic disabled until ICP filing is complete if Huawei Cloud instructed not to use the domain during filing.
+- Use `scripts/production-build.sh` on the Linux server to build the opencode binary.
+- Use `scripts/install-systemd.sh` to install the `zingpop-opencode` service template.
+- The systemd service should run `/opt/zingpop/bin/opencode`, copied from the server build output, not a symlink into `/root`.
+- Use `/srv/zingpop/workspaces/default` for single-tenant staging only.
+- Before public multi-user launch, add product-level user accounts, project ownership, and authorization/isolation checks.
+
+## Product login decision
+
+Date: 2026-05-06
+
+Use phone-first product authentication:
+
+- First registration: phone number + SMS verification code + set password.
+- Later login: phone number + password.
+- Forgot password: phone number + SMS verification code + set new password.
+- Reuse existing phone verification/account creation code in `packages/console/core/src/phone-auth.ts` and `packages/console/app/src/routes/auth/phone.tsx`.
+- Product-layer password table and password hashing flow are in `packages/console/core/src/schema/account_password.sql.ts` and `packages/console/core/src/password-auth.ts`.
+- Product phone login/register/reset UI is in `packages/console/app/src/routes/auth/phone.tsx`.
+- `deploy/nginx/zingpop-app.conf` uses `auth_request` to protect `app.zingpop.cn` before proxying to opencode.
+- Set `AUTH_COOKIE_DOMAIN=.zingpop.cn` in production so the login cookie works across `www.zingpop.cn` and `app.zingpop.cn`.
+- Do not put this inside opencode core.
+- See `docs/auth-phone-password.md`.
+
+## Commercial launch reminder
+
+Date: 2026-05-06
+
+Before any public commercial launch, remind the user to complete the open-source and legal readiness review:
+
+- opencode is MIT licensed in this repository, so commercial use is generally allowed.
+- Keep the original MIT LICENSE text and copyright notices.
+- Add open-source notices / third-party license acknowledgements to the product.
+- Audit dependencies for restrictive licenses such as GPL or AGPL.
+- Review terms for model providers, APIs, SDKs, fonts, icons, images, and hosted services.
+- Avoid implying official affiliation with the original opencode project.
+- Prefer Zingpop branding in user-facing surfaces; review use of opencode name/logo before launch.
+- Prepare user agreement, privacy policy, data security terms, and data handling disclosures before processing real user code or business data.
+
+Also check `docs/production-readiness.md` before launch.
+
 ## 发布链接暂不替换
 
 日期：2026-05-04
