@@ -47,6 +47,14 @@ packages/opencode/dist/opencode-linux-x64/bin/opencode
 
 Confirm this binary exists before continuing.
 
+Server sizing note:
+
+- The current pre-ICP server is enough to run the built opencode backend through systemd.
+- It is not reliable enough for the full `packages/console/app` production build: on 2026-05-08 the build failed with `Killed vite build` / exit code `137` on about `3.4 GiB` memory.
+- Do not upgrade only for ICP-waiting internal testing.
+- After ICP approval and before public launch, upgrade the Huawei Cloud ECS/Flexus plan to at least `4 vCPU / 8 GiB`, then rerun `./scripts/production-build.sh`.
+- If the console offers both `2 vCPU / 8 GiB` and `4 vCPU / 8 GiB`, prefer `4 vCPU / 8 GiB` when it is cheaper or comparable. Use `4 vCPU / 16 GiB` only if 8 GiB still fails.
+
 ## Install systemd Guard
 
 Run on the server:
@@ -162,6 +170,7 @@ This is acceptable for a protected single-tenant staging service. It is not enou
 While ICP filing is pending:
 
 - Keep using public IP and dev ports for internal testing.
+- Keep the current server specification if internal testing is acceptable; defer the `4 vCPU / 8 GiB` upgrade until ICP is approved and final production build validation is needed.
 - Do not use an unfiled replacement domain for public traffic.
 - Keep the certificate files, but do not enable domain traffic if Huawei Cloud told you not to use the domain.
 - Prepare scripts, services, and Nginx templates without binding the domain publicly.

@@ -56,6 +56,23 @@ chmod +x scripts/production-build.sh scripts/install-systemd.sh
 
 Confirm the opencode Linux binary builds successfully.
 
+Known result from 2026-05-08:
+
+- The opencode Linux binary can build and run on the current server.
+- `packages/console/app` production build can fail on the current `3.4 GiB` memory server with:
+
+```text
+Killed vite build
+error: script "build" exited with code 137
+```
+
+Decision:
+
+- Do not upgrade the ECS/Flexus specification while ICP filing is still pending.
+- Before public launch after ICP approval, upgrade to at least `4 vCPU / 8 GiB` and rerun the full production build.
+- Prefer `4 vCPU / 8 GiB` over `2 vCPU / 8 GiB` if it is cheaper or comparable. Use `4 vCPU / 16 GiB` only if 8 GiB still cannot complete the build.
+- Until then, keep using the current server for internal backend/systemd/Nginx/SMS preparation.
+
 ### 2. systemd Service Installation
 
 Configure `/etc/zingpop/zingpop.env`, then install and start the service:
@@ -303,7 +320,9 @@ Before commercial launch:
 
 - [ ] ICP filing is complete before public domain use.
 - [ ] No unfiled replacement domain is used for public traffic before ICP is complete.
+- [ ] ECS/Flexus is upgraded to at least `4 vCPU / 8 GiB` before final public-launch build validation.
 - [ ] Production build has been validated on the server with `scripts/production-build.sh`.
+- [ ] `packages/console/app` production build has been rerun successfully after the memory upgrade.
 - [ ] `zingpop-opencode` is installed and started through systemd.
 - [ ] Workbench backend listens on `127.0.0.1:4096`, not public `0.0.0.0:4096`.
 - [ ] Phone registration, phone-password login, and forgot-password reset are tested on the server.

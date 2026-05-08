@@ -47,6 +47,11 @@ chmod +x scripts/production-build.sh scripts/install-systemd.sh
 ```
 
 - Confirm the Linux opencode binary builds successfully.
+- Current server sizing decision:
+  - Do not upgrade the Huawei Cloud ECS/Flexus specification while ICP filing is still pending.
+  - Before public launch after ICP approval, temporarily or permanently upgrade to at least `4 vCPU / 8 GiB` and rerun the full production build.
+  - Reason: the current `3.4 GiB` memory server can run the built opencode backend, but `packages/console/app` production build has failed with `Killed vite build` / exit code `137`, which indicates memory pressure.
+  - If the Huawei Cloud plan list offers both `2 vCPU / 8 GiB` and `4 vCPU / 8 GiB`, choose `4 vCPU / 8 GiB` when it is cheaper or comparable. `4 vCPU / 16 GiB` is not required unless builds still fail after 8 GiB.
 - Install and start the systemd service:
 
 ```bash
