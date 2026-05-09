@@ -7,6 +7,9 @@
   },
   "exports": {
     ".": {
+      "node-server": {
+        "import": "./resource.node.ts"
+      },
       "production": {
         "import": "./resource.cloudflare.ts"
       },

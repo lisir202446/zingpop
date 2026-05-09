@@ -1,0 +1,29 @@
+[Unit]
+Description=Zingpop product home and auth service
+Documentation=https://www.zingpop.cn
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zingpop
+Group=zingpop
+EnvironmentFile=/etc/zingpop/zingpop.env
+WorkingDirectory=/opt/zingpop/console/.output
+ExecStart=/bin/sh -lc 'exec env HOST="${ZINGPOP_CONSOLE_HOST:-127.0.0.1}" PORT="${ZINGPOP_CONSOLE_PORT:-3000}" /usr/bin/env node ./server/index.mjs'
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/zingpop /var/log/zingpop /opt/zingpop/console /home/zingpop
+
+StandardOutput=append:/var/log/zingpop/console.log
+StandardError=append:/var/log/zingpop/console.err.log
+
+[Install]
+WantedBy=multi-user.target

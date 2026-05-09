@@ -4,14 +4,17 @@ These notes are for the Huawei Cloud Ubuntu server. Do not enable domain traffic
 
 ## Current Production Shape
 
-The workbench should run as one same-origin service:
+Production uses two local services behind Nginx:
 
 ```text
-https://app.zingpop.cn  -> Nginx -> 127.0.0.1:4096 -> opencode binary with embedded Web UI
+https://www.zingpop.cn  -> Nginx -> 127.0.0.1:3000 -> product home and auth
+https://app.zingpop.cn  -> Nginx -> auth_request 127.0.0.1:3000/auth/status
+https://app.zingpop.cn  -> Nginx -> 127.0.0.1:4096 -> opencode embedded workbench
 ```
 
-This reuses existing opencode behavior:
+This keeps production additive:
 
+- `packages/console/app` is built as a local Nitro node server for the product home and phone auth.
 - `packages/opencode` production build embeds `packages/app`.
 - The web app defaults to `location.origin` outside Vite dev mode.
 - The server already has `OPENCODE_SERVER_USERNAME` and `OPENCODE_SERVER_PASSWORD` Basic Auth.
@@ -31,6 +34,12 @@ app.zingpop.cn  -> workbench plus backend
 
 ## Server Build
 
+The production console service runs the Nitro node-server output. Install Node.js 22 or newer before installing systemd services:
+
+```bash
+node -v
+```
+
 Run on the server, not on Windows:
 
 ```bash
@@ -46,6 +55,8 @@ packages/opencode/dist/opencode-linux-x64/bin/opencode
 ```
 
 Confirm this binary exists before continuing.
+
+The console app build uses `NITRO_PRESET=node_server` by default through `scripts/production-build.sh`, so the product home/auth service can run locally on `127.0.0.1:3000`. Set `ZINGPOP_CONSOLE_NITRO_PRESET=cloudflare_module` only when building for Cloudflare instead of this server.
 
 Server sizing note:
 
@@ -76,25 +87,41 @@ Required production values:
 OPENCODE_SERVER_USERNAME=opencode
 OPENCODE_SERVER_PASSWORD=<strong private password>
 ZINGPOP_OPENCODE_BIN=/opt/zingpop/bin/opencode
+ZINGPOP_CONSOLE_HOST=127.0.0.1
+ZINGPOP_CONSOLE_PORT=3000
+APP_STAGE=production
+ZEN_SESSION_SECRET=<long random secret>
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=<dedicated mysql user>
+MYSQL_PASSWORD=<dedicated mysql password>
+MYSQL_DATABASE=opencode
 ```
 
-The install script copies the built binary to:
+The install script copies the built workbench binary to:
 
 ```text
 /opt/zingpop/bin/opencode
 ```
 
-Start the service:
-
-```bash
-systemctl enable --now zingpop-opencode
-systemctl status zingpop-opencode --no-pager
-ss -lntp | grep :4096
-```
-
-Expected listener:
+It also copies the built product home to:
 
 ```text
+/opt/zingpop/console/.output
+```
+
+Start both services:
+
+```bash
+systemctl enable --now zingpop-opencode zingpop-console
+systemctl status zingpop-opencode zingpop-console --no-pager
+ss -lntp | grep -E ':3000|:4096'
+```
+
+Expected listeners:
+
+```text
+127.0.0.1:3000
 127.0.0.1:4096
 ```
 
@@ -109,18 +136,20 @@ deploy/nginx/zingpop-app.conf
 deploy/nginx/zingpop-www.conf
 ```
 
-After ICP is complete, add DNS for `app.zingpop.cn` and issue a certificate for it. The existing `www.zingpop.cn` certificate does not automatically cover `app.zingpop.cn` unless it is a wildcard certificate.
+After ICP is complete, add DNS for `zingpop.cn`, `www.zingpop.cn`, and `app.zingpop.cn`, then issue certificates. The existing `www.zingpop.cn` certificate does not automatically cover `app.zingpop.cn` unless it is a wildcard certificate.
 
-Then enable the app proxy:
+Then enable both proxies:
 
 ```bash
+cp deploy/nginx/zingpop-www.conf /etc/nginx/sites-available/zingpop-www.conf
 cp deploy/nginx/zingpop-app.conf /etc/nginx/sites-available/zingpop-app.conf
+ln -sfn /etc/nginx/sites-available/zingpop-www.conf /etc/nginx/sites-enabled/zingpop-www.conf
 ln -sfn /etc/nginx/sites-available/zingpop-app.conf /etc/nginx/sites-enabled/zingpop-app.conf
 nginx -t
 systemctl reload nginx
 ```
 
-Only enable `zingpop-www.conf` after the product home production server is finalized.
+Only enable these configs after `zingpop-console` is listening on `127.0.0.1:3000`; `zingpop-app.conf` depends on `/auth/status` through Nginx `auth_request`.
 
 After Nginx is the public entry, remove public security-group access to port `4096`. Keep only `80` and `443` public, plus restricted SSH.
 

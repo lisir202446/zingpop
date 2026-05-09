@@ -12,7 +12,7 @@ bun install --frozen-lockfile
 bun run --cwd packages/opencode build --single
 
 # Product home build is separate from the opencode workbench.
-bun run --cwd packages/console/app build
+NITRO_PRESET="${ZINGPOP_CONSOLE_NITRO_PRESET:-node_server}" bun run --cwd packages/console/app build
 
 echo "Production build complete."
 echo "Workbench binary: packages/opencode/dist/"

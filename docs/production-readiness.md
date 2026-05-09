@@ -188,9 +188,9 @@ Use Nginx or another reverse proxy so users do not need port numbers.
 Recommended routing:
 
 ```text
-https://www.zingpop.cn  -> product home
-https://app.zingpop.cn  -> opencode embedded workbench UI
-https://app.zingpop.cn  -> opencode backend API/WebSocket routes
+https://www.zingpop.cn  -> product home/auth on 127.0.0.1:3000
+https://app.zingpop.cn  -> auth_request to 127.0.0.1:3000/auth/status
+https://app.zingpop.cn  -> opencode embedded workbench/API/WebSocket on 127.0.0.1:4096
 ```
 
 The proxy should hide these internal services:
@@ -260,7 +260,9 @@ The current setup uses dev servers. Production should not rely on `vite dev`.
 Needed:
 
 - Build opencode with `bun run --cwd packages/opencode build --single`.
+- Build `packages/console/app` with `NITRO_PRESET=node_server` for the local product-home/auth service.
 - Run the compiled opencode binary under `systemd`.
+- Run the console `.output` under `zingpop-console.service` with Node.js 22+.
 - Use Nginx as the public reverse proxy.
 - Store logs under `/var/log/zingpop`.
 
@@ -268,6 +270,7 @@ Added deployment assets:
 
 ```text
 deploy/env/zingpop.env.example
+deploy/systemd/zingpop-console.service
 deploy/systemd/zingpop-opencode.service
 deploy/nginx/zingpop-app.conf
 deploy/nginx/zingpop-www.conf
@@ -324,6 +327,8 @@ Before commercial launch:
 - [ ] Production build has been validated on the server with `scripts/production-build.sh`.
 - [ ] `packages/console/app` production build has been rerun successfully after the memory upgrade.
 - [ ] `zingpop-opencode` is installed and started through systemd.
+- [ ] `zingpop-console` is installed and started through systemd.
+- [ ] Product home/auth listens on `127.0.0.1:3000`, not public `0.0.0.0:3000`.
 - [ ] Workbench backend listens on `127.0.0.1:4096`, not public `0.0.0.0:4096`.
 - [ ] Phone registration, phone-password login, and forgot-password reset are tested on the server.
 - [ ] Huawei Cloud SMS templates, signature, Access Key, and environment variables are verified.
