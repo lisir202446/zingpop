@@ -50,8 +50,14 @@ installed clean
 
 Known current follow-up:
 
-- The user reported that the frontend link still cannot open in the browser even though server and external `curl` checks return expected status codes. Treat this first as a client/browser/proxy/DNS-cache issue unless server-side checks regress.
+- The user reported that the frontend link could not open in the browser even though server and external `curl` checks returned expected status codes. This was resolved client-side after checking proxy/DNS behavior.
 - On Windows with proxy software, DNS may resolve to `198.18.0.x` fake-IP addresses. That can be normal, but proxy/browser routing can still cause open failures.
+- Phone auth is not complete yet:
+  - `https://www.zingpop.cn/auth/phone` loads.
+  - Sending a registration code currently shows the localized "Authentication service is not ready" error.
+  - In code, that error maps to missing database configuration/resource access before SMS is attempted.
+  - If only SMS is missing, the expected localized error is "短信服务尚未配置".
+  - Check database env/migrations first, then Huawei Cloud SMS credentials and templates.
 
 Client-side diagnostics:
 

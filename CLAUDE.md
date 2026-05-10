@@ -387,3 +387,5 @@ SQL
 6. 首页页脚是否展示 ICP 备案号。
 7. MySQL、`/srv/zingpop`、`/etc/zingpop/zingpop.env` 的备份策略。
 8. 面向公开多用户前，必须完成用户 workspace / session / file / terminal 隔离。
+
+2026-05-10 追加：短信和用户登录还没有完成闭环。`/auth/phone` 页面可以打开，但发送注册验证码时显示“认证服务暂不可用”。按当前代码，这个错误优先指向数据库配置或迁移未就绪；如果只是短信没配置，页面应显示“短信服务尚未配置”。下一步先检查 `/etc/zingpop/zingpop.env` 里的 `DATABASE_URL` / `MYSQL_*` 和 MySQL 表 `login_code`、`account_password`，再配置华为云短信变量。

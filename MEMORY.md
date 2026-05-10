@@ -62,8 +62,13 @@ nslookup app.zingpop.cn 223.5.5.5
 
 Still remaining before wider public use:
 
-- Verify real phone registration, phone-password login, and forgot-password reset on the server.
-- Configure and verify Huawei Cloud SMS credentials and approved templates.
+- Phone auth is not complete yet as of 2026-05-10:
+  - The page loads at `https://www.zingpop.cn/auth/phone`.
+  - Sending a registration code currently shows the localized "Authentication service is not ready" error.
+  - In code, that message is returned before SMS when database configuration/resource access fails.
+  - If SMS alone is missing, the expected localized error is "SMS service is not configured yet" / "短信服务尚未配置".
+- Verify database configuration and migrations first, then verify real phone registration, phone-password login, and forgot-password reset on the server.
+- Configure and verify Huawei Cloud SMS credentials and approved templates after database checks pass.
 - Confirm MySQL production credentials in `/etc/zingpop/zingpop.env`.
 - Test model provider API keys and a real workbench request.
 - Add/display ICP filing number in the website footer if not already present.

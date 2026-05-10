@@ -51,6 +51,12 @@ Certificate renewal dry-run succeeded for:
 
 The console build previously failed when a SolidStart dev SSR manifest was compiled into the production node-server output. The deployment scripts now remove stale `.nitro` output and reject `@manifest` artifacts before install. The current installed output was verified as clean.
 
+Current auth status:
+
+- The phone auth page loads, but real registration/login/reset is not verified yet.
+- A registration-code request currently shows "Authentication service is not ready", which maps to database configuration/resource access failure before SMS sending.
+- Complete database env and migrations before testing Huawei Cloud SMS.
+
 ## Why Use app.zingpop.cn
 
 The existing workbench expects to live at the root of its browser origin. Serving it at `/workbench` under the product home would require frontend routing and asset-path changes. A subdomain keeps production additive:
