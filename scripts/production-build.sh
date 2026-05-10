@@ -12,6 +12,11 @@ bun install --frozen-lockfile
 bun run --cwd packages/opencode build --single
 
 # Product home build is separate from the opencode workbench.
+rm -rf \
+  packages/console/app/.output \
+  packages/console/app/.wrangler \
+  packages/console/app/node_modules/.nitro
+
 NITRO_PRESET="${ZINGPOP_CONSOLE_NITRO_PRESET:-node_server}" bun run --cwd packages/console/app build
 
 echo "Production build complete."
