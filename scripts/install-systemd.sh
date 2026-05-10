@@ -51,6 +51,11 @@ else
 fi
 
 if [[ -f "$ROOT_DIR/packages/console/app/.output/server/index.mjs" ]]; then
+  if grep -R "@manifest" -n "$ROOT_DIR/packages/console/app/.output/server" >/dev/null 2>&1; then
+    echo "Console output contains development manifest imports. Run ./scripts/production-build.sh again with the latest deploy scripts." >&2
+    exit 1
+  fi
+
   rm -rf /opt/zingpop/console/.output
   cp -a "$ROOT_DIR/packages/console/app/.output" /opt/zingpop/console/.output
   chown -R zingpop:zingpop /opt/zingpop/console

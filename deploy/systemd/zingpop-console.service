@@ -9,6 +9,7 @@ Type=simple
 User=zingpop
 Group=zingpop
 EnvironmentFile=/etc/zingpop/zingpop.env
+Environment=NODE_ENV=production
 WorkingDirectory=/opt/zingpop/console/.output
 ExecStart=/bin/sh -lc 'exec env HOST="${ZINGPOP_CONSOLE_HOST:-127.0.0.1}" PORT="${ZINGPOP_CONSOLE_PORT:-3000}" /usr/bin/env node ./server/index.mjs'
 Restart=always
