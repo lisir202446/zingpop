@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$ROOT_DIR"
 
+export NODE_ENV=production
+
 bun install --frozen-lockfile
 
 # Existing opencode build embeds packages/app into the server binary. This keeps
@@ -18,6 +20,11 @@ rm -rf \
   packages/console/app/node_modules/.nitro
 
 NITRO_PRESET="${ZINGPOP_CONSOLE_NITRO_PRESET:-node_server}" bun run --cwd packages/console/app build
+
+if grep -R "@manifest" -n packages/console/app/.output/server >/dev/null 2>&1; then
+  echo "Console build contains development manifest imports. Refusing to install a broken production build." >&2
+  exit 1
+fi
 
 echo "Production build complete."
 echo "Workbench binary: packages/opencode/dist/"
