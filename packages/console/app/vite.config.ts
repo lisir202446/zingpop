@@ -24,6 +24,12 @@ export default defineConfig({
   server: {
     allowedHosts: true,
   },
+  define: nodeServer
+    ? {
+        "import.meta.env.DEV": "false",
+        "import.meta.env.PROD": "true",
+      }
+    : undefined,
   build: {
     rollupOptions: {
       external: ["cloudflare:workers"],
