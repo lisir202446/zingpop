@@ -21,6 +21,36 @@ This keeps production additive:
 
 No opencode core runtime file is changed for this deployment path.
 
+## 2026-05-10 Live Status
+
+This path is now deployed on the Huawei Cloud server:
+
+```text
+Public IP: 121.36.58.22
+Server spec: 4 vCPU / 8 GiB
+Console service: 127.0.0.1:3000
+Workbench backend: 127.0.0.1:4096
+Public entry: Nginx on 80/443
+```
+
+Verified responses:
+
+```text
+http://www.zingpop.cn   -> 301
+https://www.zingpop.cn  -> 200
+https://zingpop.cn      -> 200
+https://app.zingpop.cn  -> 302 to https://www.zingpop.cn/auth/phone when unauthenticated
+```
+
+Certificate renewal dry-run succeeded for:
+
+```text
+/etc/letsencrypt/live/www.zingpop.cn/fullchain.pem
+/etc/letsencrypt/live/app.zingpop.cn/fullchain.pem
+```
+
+The console build previously failed when a SolidStart dev SSR manifest was compiled into the production node-server output. The deployment scripts now remove stale `.nitro` output and reject `@manifest` artifacts before install. The current installed output was verified as clean.
+
 ## Why Use app.zingpop.cn
 
 The existing workbench expects to live at the root of its browser origin. Serving it at `/workbench` under the product home would require frontend routing and asset-path changes. A subdomain keeps production additive:
@@ -63,7 +93,8 @@ Server sizing note:
 - The current pre-ICP server is enough to run the built opencode backend through systemd.
 - It is not reliable enough for the full `packages/console/app` production build: on 2026-05-08 the build failed with `Killed vite build` / exit code `137` on about `3.4 GiB` memory.
 - Do not upgrade only for ICP-waiting internal testing.
-- After ICP approval and before public launch, upgrade the Huawei Cloud ECS/Flexus plan to at least `4 vCPU / 8 GiB`, then rerun `./scripts/production-build.sh`.
+- ICP is now complete and the Huawei Cloud ECS/Flexus plan has been upgraded to `4 vCPU / 8 GiB`.
+- After the upgrade, `./scripts/production-build.sh` completed successfully on 2026-05-10.
 - If the console offers both `2 vCPU / 8 GiB` and `4 vCPU / 8 GiB`, prefer `4 vCPU / 8 GiB` when it is cheaper or comparable. Use `4 vCPU / 16 GiB` only if 8 GiB still fails.
 
 ## Install systemd Guard

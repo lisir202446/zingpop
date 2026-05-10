@@ -14,12 +14,63 @@ Default approach:
 - Before editing `packages/opencode/src`, verify that no existing opencode feature or external deployment wrapper can solve the problem.
 - If a requirement truly needs opencode core changes, document the tradeoff and get explicit approval before editing.
 
-## Current Dev Setup
+## 2026-05-10 Production Status
 
-- Product home is served on `http://121.36.58.22:3000/`.
-- Workbench UI is served on `http://121.36.58.22:3001/`.
-- Workbench backend is served on `http://121.36.58.22:4096/`.
-- Huawei Cloud security group currently needs inbound TCP ports `3000`, `3001`, and `4096`.
+The core domain deployment is now live:
+
+```text
+http://www.zingpop.cn   -> 301 -> https://www.zingpop.cn/
+https://www.zingpop.cn  -> 200
+https://zingpop.cn      -> 200
+https://app.zingpop.cn  -> 302 -> https://www.zingpop.cn/auth/phone when unauthenticated
+```
+
+Infrastructure status:
+
+- ICP filing is complete.
+- Huawei Cloud ECS/Flexus has been upgraded to `4 vCPU / 8 GiB`.
+- DNS points `zingpop.cn`, `www.zingpop.cn`, and `app.zingpop.cn` to `121.36.58.22`.
+- Let's Encrypt certificates are active for `www.zingpop.cn`/`zingpop.cn` and `app.zingpop.cn`.
+- `certbot renew --dry-run` succeeded.
+- `zingpop-console.service` is active on `127.0.0.1:3000`.
+- `zingpop-opencode.service` is active on `127.0.0.1:4096`.
+- Nginx is active on public `80` and `443`.
+- Security group should now expose only public `80`/`443`; SSH `22` is restricted to the user's fixed IP.
+- Public `3000`, `3001`, and `4096` are removed from the security group.
+
+Build status:
+
+- `scripts/production-build.sh` completed successfully after the memory upgrade.
+- Console output was checked for `@manifest` / `assetsPath` dev SSR imports before and after install:
+
+```text
+source clean
+installed clean
+```
+
+Known current follow-up:
+
+- The user reported that the frontend link still cannot open in the browser even though server and external `curl` checks return expected status codes. Treat this first as a client/browser/proxy/DNS-cache issue unless server-side checks regress.
+- On Windows with proxy software, DNS may resolve to `198.18.0.x` fake-IP addresses. That can be normal, but proxy/browser routing can still cause open failures.
+
+Client-side diagnostics:
+
+```powershell
+curl.exe -I https://www.zingpop.cn/
+curl.exe -I https://zingpop.cn/
+curl.exe -I https://app.zingpop.cn/
+nslookup www.zingpop.cn 223.5.5.5
+nslookup app.zingpop.cn 223.5.5.5
+```
+
+## Historical Dev Setup
+
+This was the pre-production IP/port setup. It should not be used as the public production path after 2026-05-10.
+
+- Product home was served on `http://121.36.58.22:3000/`.
+- Workbench UI was served on `http://121.36.58.22:3001/`.
+- Workbench backend was served on `http://121.36.58.22:4096/`.
+- Huawei Cloud security group temporarily needed inbound TCP ports `3000`, `3001`, and `4096`.
 - The workbench may still show `localhost:4096` if the browser has an old default server saved.
 - Users must manually add `http://121.36.58.22:4096` to connect the workbench to the cloud backend.
 - Opening a project must use a server path such as `/root/zingpop`, not a local Windows path like `D:\...`.
@@ -321,21 +372,21 @@ Before commercial launch:
 
 ## Minimum Production Checklist
 
-- [ ] ICP filing is complete before public domain use.
-- [ ] No unfiled replacement domain is used for public traffic before ICP is complete.
-- [ ] ECS/Flexus is upgraded to at least `4 vCPU / 8 GiB` before final public-launch build validation.
-- [ ] Production build has been validated on the server with `scripts/production-build.sh`.
-- [ ] `packages/console/app` production build has been rerun successfully after the memory upgrade.
-- [ ] `zingpop-opencode` is installed and started through systemd.
-- [ ] `zingpop-console` is installed and started through systemd.
-- [ ] Product home/auth listens on `127.0.0.1:3000`, not public `0.0.0.0:3000`.
-- [ ] Workbench backend listens on `127.0.0.1:4096`, not public `0.0.0.0:4096`.
+- [x] ICP filing is complete before public domain use.
+- [x] No unfiled replacement domain is used for public traffic before ICP is complete.
+- [x] ECS/Flexus is upgraded to at least `4 vCPU / 8 GiB` before final public-launch build validation.
+- [x] Production build has been validated on the server with `scripts/production-build.sh`.
+- [x] `packages/console/app` production build has been rerun successfully after the memory upgrade.
+- [x] `zingpop-opencode` is installed and started through systemd.
+- [x] `zingpop-console` is installed and started through systemd.
+- [x] Product home/auth listens on `127.0.0.1:3000`, not public `0.0.0.0:3000`.
+- [x] Workbench backend listens on `127.0.0.1:4096`, not public `0.0.0.0:4096`.
 - [ ] Phone registration, phone-password login, and forgot-password reset are tested on the server.
 - [ ] Huawei Cloud SMS templates, signature, Access Key, and environment variables are verified.
-- [ ] Domain is configured.
-- [ ] HTTPS certificate is active.
-- [ ] Nginx/reverse proxy is configured.
-- [ ] Product home works through the domain.
+- [x] Domain is configured.
+- [x] HTTPS certificate is active.
+- [x] Nginx/reverse proxy is configured.
+- [x] Product home works through the domain.
 - [ ] Workbench works through the domain.
 - [x] Workbench production path can automatically connect to the backend through same-origin `location.origin`.
 - [x] Users do not need to add `localhost:4096` or `121.36.58.22:4096` in the planned app-domain deployment.
@@ -348,8 +399,8 @@ Before commercial launch:
 - [x] Workbench service can use the opencode production build instead of Vite dev.
 - [x] Workbench backend has a systemd service template.
 - [ ] Server reboot restores all services automatically.
-- [ ] Production security group exposes only `80` and `443`; SSH `22` is restricted to a fixed IP.
-- [ ] Public access to `3000`, `3001`, and `4096` is removed before production.
+- [x] Production security group exposes only `80` and `443`; SSH `22` is restricted to a fixed IP.
+- [x] Public access to `3000`, `3001`, and `4096` is removed before production.
 - [ ] Original MIT license and copyright notices are retained.
 - [ ] Dependency license audit is complete.
 - [ ] Third-party open-source notices are ready.

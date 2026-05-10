@@ -12,6 +12,65 @@ Hard rule for all future work: do not change opencode's reusable bottom-layer ru
 - Preserve the existing opencode CLI/server run path, SDK generation, project/session/file routing, desktop runtime, and web runtime assumptions.
 - If a production feature cannot be completed without opencode core changes, stop and explain the tradeoff before editing.
 
+## Production status
+
+Date: 2026-05-10
+
+Current public production path is live on Huawei Cloud:
+
+- Server public IP: `121.36.58.22`.
+- ECS/Flexus specification has been upgraded to `4 vCPU / 8 GiB`.
+- ICP filing is complete for `zingpop.cn`.
+- DNS records are configured for `zingpop.cn`, `www.zingpop.cn`, and `app.zingpop.cn`.
+- Let's Encrypt certificates are active:
+  - `www.zingpop.cn` certificate also covers `zingpop.cn`.
+  - `app.zingpop.cn` has its own certificate.
+- `certbot renew --dry-run` succeeded on 2026-05-10.
+- Nginx is the only public entry for app traffic:
+  - `80` redirects to HTTPS.
+  - `443` serves HTTPS.
+  - `127.0.0.1:3000` serves the product home/auth console.
+  - `127.0.0.1:4096` serves the opencode workbench backend.
+- `zingpop-console.service`, `zingpop-opencode.service`, and `nginx.service` are active and enabled.
+- Security group has been tightened:
+  - Public `80` and `443` remain open.
+  - SSH `22` is restricted to the user's fixed IP.
+  - Public `3000`, `3001`, and `4096` should remain closed.
+- Verified server responses:
+  - `http://www.zingpop.cn` -> `301`
+  - `https://www.zingpop.cn` -> `200`
+  - `https://zingpop.cn` -> `200`
+  - `https://app.zingpop.cn` -> `302` to `https://www.zingpop.cn/auth/phone` when not logged in.
+- Console production build guard is in place:
+  - `scripts/production-build.sh` cleans stale `.nitro` output and rejects `@manifest` dev SSR artifacts.
+  - `scripts/install-systemd.sh` refuses to install console output containing `@manifest`.
+  - `packages/console/app/vite.config.ts` forces `import.meta.env.DEV=false` and `import.meta.env.PROD=true` for `NITRO_PRESET=node_server`.
+
+Browser issue note:
+
+- If the user says the frontend link cannot open while server `curl` returns `200`, first check client-side DNS/proxy/browser behavior.
+- On Windows with proxy tools, `nslookup` may return `198.18.0.x` fake-IP values. That can be normal for proxy DNS mode, but browser rules may still block or misroute the request.
+- Ask for the exact browser error page and run:
+
+```powershell
+curl.exe -I https://www.zingpop.cn/
+curl.exe -I https://zingpop.cn/
+curl.exe -I https://app.zingpop.cn/
+nslookup www.zingpop.cn 223.5.5.5
+nslookup app.zingpop.cn 223.5.5.5
+```
+
+Still remaining before wider public use:
+
+- Verify real phone registration, phone-password login, and forgot-password reset on the server.
+- Configure and verify Huawei Cloud SMS credentials and approved templates.
+- Confirm MySQL production credentials in `/etc/zingpop/zingpop.env`.
+- Test model provider API keys and a real workbench request.
+- Add/display ICP filing number in the website footer if not already present.
+- Add backup jobs for MySQL, `/srv/zingpop`, and `/etc/zingpop/zingpop.env`.
+- Complete public multi-user project/workspace isolation before allowing untrusted users.
+- Prepare user agreement, privacy policy, data processing notes, and open-source notices.
+
 ## Production deployment path
 
 Date: 2026-05-06

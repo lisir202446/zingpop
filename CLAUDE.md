@@ -347,3 +347,43 @@ SQL
 5. **【需要写代码】** 邮件服务改造（aws.ts，约 200 行）
 6. **【备案通过后】** 域名绑定 + HTTPS 证书
 7. **【需要写代码】** 文件存储支持华为 OBS（storage.ts，约 10 行）
+
+# 2026-05-10 Codex 状态补充
+
+当前生产域名链路已经上线：
+
+- 公网 IP：`121.36.58.22`
+- 服务器规格：`4 vCPU / 8 GiB`
+- `https://www.zingpop.cn`：产品首页，当前 HTTP 状态 `200`
+- `https://zingpop.cn`：根域名，当前 HTTP 状态 `200`
+- `https://app.zingpop.cn`：工作台入口，未登录时 `302` 到 `https://www.zingpop.cn/auth/phone`
+- `zingpop-console.service`：运行在 `127.0.0.1:3000`
+- `zingpop-opencode.service`：运行在 `127.0.0.1:4096`
+- Nginx：公网只通过 `80/443` 对外
+- 证书：`www.zingpop.cn`/`zingpop.cn` 和 `app.zingpop.cn` 均已签发，`certbot renew --dry-run` 成功
+- 安全组：公网保留 `80/443`，SSH `22` 限制到用户固定 IP，临时公网 `3000/3001/4096` 应保持关闭
+
+当前已经完成的部署关键点：
+
+- ICP 备案已完成。
+- ECS 已升级，生产构建已在服务器通过。
+- `scripts/production-build.sh` 会清理旧 `.nitro` 并拒绝包含 `@manifest` 的坏产物。
+- `scripts/install-systemd.sh` 会在安装前检查 console 产物。
+- `packages/console/app/vite.config.ts` 在 `NITRO_PRESET=node_server` 时强制生产环境 define，避免 SolidStart dev SSR manifest 混入生产构建。
+
+当前仍需要优先检查：
+
+1. 用户浏览器无法打开前端链接时，先排查客户端 DNS / 代理 / 浏览器缓存；Windows 代理环境下 `nslookup` 可能显示 `198.18.0.x` fake-IP。
+2. 真实手机号注册、手机号密码登录、忘记密码重置流程。
+3. 华为云短信变量和模板：
+   - `HUAWEI_SMS_ENDPOINT`
+   - `HUAWEI_SMS_APP_KEY`
+   - `HUAWEI_SMS_APP_SECRET`
+   - `HUAWEI_SMS_SENDER`
+   - `HUAWEI_SMS_TEMPLATE_ID`
+   - `HUAWEI_SMS_SIGNATURE`
+4. `/etc/zingpop/zingpop.env` 中的 `DATABASE_URL` 或 `MYSQL_*` 是否为真实生产 MySQL 配置。
+5. 登录后进入 `https://app.zingpop.cn` 并完成一次真实模型调用。
+6. 首页页脚是否展示 ICP 备案号。
+7. MySQL、`/srv/zingpop`、`/etc/zingpop/zingpop.env` 的备份策略。
+8. 面向公开多用户前，必须完成用户 workspace / session / file / terminal 隔离。
