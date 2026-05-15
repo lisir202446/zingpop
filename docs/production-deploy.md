@@ -208,6 +208,44 @@ Before public multi-user launch, Zingpop still needs:
 - Authorization checks before opening projects, sessions, files, terminals, and commands.
 - A product-level project creation/import flow.
 
+## Payment And Billing
+
+The current deployment is not paid-launch ready. WeChat Pay and Alipay code exists, but production payment is not integrated until live merchant credentials and callbacks are verified end to end.
+
+Add production payment values to `/etc/zingpop/zingpop.env` only after the merchant accounts are approved:
+
+```text
+DOMESTIC_PAYMENT_CNY_PER_CREDIT=<cny price per internal credit>
+
+ALIPAY_APP_ID=<production app id>
+ALIPAY_PRIVATE_KEY=<production app private key>
+ALIPAY_PUBLIC_KEY=<alipay public key>
+ALIPAY_NOTIFY_URL=https://www.zingpop.cn/pay/alipay/notify
+# Optional fallback only. Normal checkout should pass a per-workspace success URL.
+ALIPAY_RETURN_URL=https://www.zingpop.cn/
+
+WECHAT_PAY_APP_ID=<production app id>
+WECHAT_PAY_MCH_ID=<merchant id>
+WECHAT_PAY_SERIAL_NO=<api certificate serial number>
+WECHAT_PAY_PRIVATE_KEY=<api private key>
+WECHAT_PAY_PLATFORM_CERT=<wechat pay platform certificate>
+WECHAT_PAY_V3_KEY=<api v3 key>
+WECHAT_PAY_NOTIFY_URL=https://www.zingpop.cn/pay/wechat/notify
+```
+
+Production verification must cover:
+
+- Real Alipay order creation, payment-page redirect, callback signature verification, `payment` row update, and workspace balance crediting.
+- Real WeChat Pay H5 order creation, payment-page redirect, callback signature verification, `payment` row update, and workspace balance crediting.
+- Duplicate callback idempotency, failed/expired payment handling, amount mismatch rejection, and callback replay/tamper protection.
+- Subscription purchase, renewal, cancellation, expiration, quota enforcement, refund, invoice/tax handling, and reconciliation.
+
+Known current gap:
+
+- Lite/subscription checkout is not migrated to domestic payments yet.
+- Development-mode fake checkout can mark an order paid locally; it must not be used as proof of production payment readiness.
+- Legacy Stripe reload/subscription paths still exist and must be reviewed before charging China-market customers.
+
 ## Project Isolation
 
 The systemd service runs as a dedicated Linux user:

@@ -14,6 +14,12 @@ Default approach:
 - Before editing `packages/opencode/src`, verify that no existing opencode feature or external deployment wrapper can solve the problem.
 - If a requirement truly needs opencode core changes, document the tradeoff and get explicit approval before editing.
 
+## Commercialization Standard
+
+The user's target is not just "the domain can open"; the target is full commercialization. Zingpop should be considered commercially ready only when it can charge customers, process real customer code and account data, sign business agreements, and operate continuously without unresolved licensing, privacy, security, multi-user isolation, or operations blockers.
+
+Track the full commercial launch gate in `docs/commercialization-readiness.md`.
+
 ## 2026-05-10 Production Status
 
 The core domain deployment is now live:
@@ -58,6 +64,11 @@ Known current follow-up:
   - In code, that error maps to missing database configuration/resource access before SMS is attempted.
   - If only SMS is missing, the expected localized error is "短信服务尚未配置".
   - Check database env/migrations first, then Huawei Cloud SMS credentials and templates.
+- Payment is not complete yet:
+  - WeChat Pay and Alipay code exists, but production merchant accounts, credentials, callback URLs, and end-to-end live payment verification are not complete.
+  - Development-mode fake payment fallback and any historical fake payment record do not count as real payment readiness.
+  - Domestic Lite/subscription checkout is still blocked in code with "Lite checkout has not been migrated to domestic payments yet".
+  - Legacy Stripe subscription/reload paths still exist and must be reviewed before relying on them for the China-market paid flow.
 
 Client-side diagnostics:
 
@@ -375,10 +386,36 @@ Before commercial launch:
 - Avoid implying official affiliation with the original opencode project.
 - Review whether the `opencode` name, logo, or branding can be used commercially; prefer Zingpop branding in user-facing surfaces.
 - Prepare user agreement, privacy policy, data processing terms, and security disclosures before handling real user code or business data.
+- For full commercialization, also complete the business qualification, personal information, AI-service, payment, operations, and multi-user isolation checks in `docs/commercialization-readiness.md`.
+
+### 9. Payment And Billing Readiness
+
+Current status:
+
+- Do not treat Zingpop as paid-launch ready.
+- WeChat Pay H5 and Alipay implementation code is present in `packages/console/core/src/pay`, but production merchant onboarding and live verification are not complete.
+- Payment callback route files exist under `packages/console/app/src/routes/pay`, but they still need real-provider verification on the production domain.
+- The development fallback can mark payments paid locally in `APP_STAGE=development`; this is useful for testing UI flow only and must not be counted as real revenue collection.
+- Lite/subscription checkout has not been migrated to domestic payments yet.
+- Stripe-based subscription/reload code still exists and must be reviewed or replaced before China-market paid launch.
+
+Before paid launch:
+
+- Complete WeChat Pay merchant application and configure production `WECHAT_PAY_APP_ID`, `WECHAT_PAY_MCH_ID`, `WECHAT_PAY_SERIAL_NO`, `WECHAT_PAY_PRIVATE_KEY`, `WECHAT_PAY_PLATFORM_CERT`, `WECHAT_PAY_V3_KEY`, and `WECHAT_PAY_NOTIFY_URL`.
+- Complete Alipay merchant application and configure production `ALIPAY_APP_ID`, `ALIPAY_PRIVATE_KEY`, `ALIPAY_PUBLIC_KEY`, `ALIPAY_NOTIFY_URL`, and `ALIPAY_RETURN_URL`.
+- Set the real `DOMESTIC_PAYMENT_CNY_PER_CREDIT` and confirm displayed pricing, internal balance units, and provider charge amount match.
+- Verify HTTPS reachability for provider callbacks on `www.zingpop.cn`.
+- Verify real Alipay and WeChat Pay order creation, QR/H5/payment-page redirect, callback signature validation, order status update, and exactly-once balance crediting.
+- Test failed payment, expired payment, duplicate callback, amount mismatch, refund, and chargeback/manual dispute handling.
+- Implement domestic subscription purchase, renewal, cancellation, expiration, quota enforcement, and customer notification.
+- Implement invoice/tax handling and provider settlement reconciliation.
+- Add customer support and abuse handling for billing disputes.
 
 ## Minimum Production Checklist
 
 - [x] ICP filing is complete before public domain use.
+- [ ] Paid SaaS qualification is reviewed; required ICP filing/license path is confirmed.
+- [ ] ICP filing number is displayed in the website footer with the required MIIT link.
 - [x] No unfiled replacement domain is used for public traffic before ICP is complete.
 - [x] ECS/Flexus is upgraded to at least `4 vCPU / 8 GiB` before final public-launch build validation.
 - [x] Production build has been validated on the server with `scripts/production-build.sh`.
@@ -394,6 +431,7 @@ Before commercial launch:
 - [x] Nginx/reverse proxy is configured.
 - [x] Product home works through the domain.
 - [ ] Workbench works through the domain.
+- [ ] A real model request succeeds through the production workbench.
 - [x] Workbench production path can automatically connect to the backend through same-origin `location.origin`.
 - [x] Users do not need to add `localhost:4096` or `121.36.58.22:4096` in the planned app-domain deployment.
 - [x] Backend can require authentication through existing opencode Basic Auth.
@@ -407,10 +445,17 @@ Before commercial launch:
 - [ ] Server reboot restores all services automatically.
 - [x] Production security group exposes only `80` and `443`; SSH `22` is restricted to a fixed IP.
 - [x] Public access to `3000`, `3001`, and `4096` is removed before production.
+- [ ] WeChat Pay merchant account is approved and production credentials are configured.
+- [ ] Alipay merchant account is approved and production credentials are configured.
+- [ ] Real Alipay payment creation, callback verification, and balance crediting are verified on production.
+- [ ] Real WeChat Pay H5 payment creation, callback verification, and balance crediting are verified on production.
+- [ ] Subscription purchase, renewal, cancellation, expiration, and quota enforcement are implemented and tested.
+- [ ] Refund, invoice/tax handling, and payment reconciliation are ready.
 - [ ] Original MIT license and copyright notices are retained.
 - [ ] Dependency license audit is complete.
 - [ ] Third-party open-source notices are ready.
 - [ ] Third-party service/model/API terms are reviewed.
+- [ ] Full commercialization checklist in `docs/commercialization-readiness.md` is complete or documented as not applicable.
 - [ ] Zingpop branding replaces user-facing opencode branding where appropriate.
 - [ ] User agreement and privacy policy are ready.
 - [ ] Data processing notes are ready.

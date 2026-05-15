@@ -71,6 +71,12 @@ Still remaining before wider public use:
 - Configure and verify Huawei Cloud SMS credentials and approved templates after database checks pass.
 - Confirm MySQL production credentials in `/etc/zingpop/zingpop.env`.
 - Test model provider API keys and a real workbench request.
+- Payment is not production-ready:
+  - Existing WeChat Pay and Alipay code is only a starting point, not a verified live payment integration.
+  - Development-mode fake payment records and checkout fallback must not be counted as real payment readiness.
+  - WeChat Pay merchant application, Alipay merchant application, production credentials, callback URLs, callback reachability, signature verification with real provider payloads, order state updates, balance crediting, refunds, invoices, tax handling, reconciliation, and customer support flow still need production verification.
+  - Domestic Lite/subscription checkout is not complete; current code still throws "Lite checkout has not been migrated to domestic payments yet".
+  - Legacy Stripe subscription/reload code must be reviewed before any China-market paid launch; do not assume it works with the planned WeChat Pay/Alipay commercial path.
 - Add/display ICP filing number in the website footer if not already present.
 - Add backup jobs for MySQL, `/srv/zingpop`, and `/etc/zingpop/zingpop.env`.
 - Complete public multi-user project/workspace isolation before allowing untrusted users.
@@ -184,6 +190,29 @@ Before any public commercial launch, remind the user to complete the open-source
 - Prepare user agreement, privacy policy, data security terms, and data handling disclosures before processing real user code or business data.
 
 Also check `docs/production-readiness.md` before launch.
+
+## Full commercialization standard
+
+Date: 2026-05-12
+
+The user's requirement is full commercialization, not merely production access. Treat "ready to launch" as blocked until Zingpop can charge customers, process real customer code/account data, sign business agreements, and operate continuously without unresolved licensing, privacy, security, multi-user isolation, or operations blockers.
+
+Use `docs/commercialization-readiness.md` as the durable commercial launch gate.
+
+Before public paid launch, preserve these blockers explicitly in any checklist or deployment plan:
+
+- Confirm whether the paid SaaS model requires an ICP value-added telecom business license in addition to the existing ICP filing.
+- Display the ICP filing number in the website footer with the required MIIT link.
+- Complete production phone registration, phone-password login, forgot-password reset, database migrations, and Huawei Cloud SMS verification.
+- Verify logged-in `https://app.zingpop.cn` workbench usage, WebSocket/API behavior, and a real model request.
+- Implement and test public multi-user workspace/project/session/file/terminal/command isolation before untrusted users are allowed in.
+- Prevent arbitrary server path access and keep `/root` or shared staging paths hidden from normal users.
+- Publish user agreement, privacy policy, data processing notice, account deletion/data deletion flow, third-party processor disclosures, and model-provider disclosures.
+- Rotate production secrets, keep `/etc/zingpop/zingpop.env` out of Git, and revoke/recreate any previously exposed GitHub token.
+- Complete dependency license audit, open-source notices, model provider commercial terms review, and user-facing Zingpop branding replacement where appropriate.
+- Review generative AI filing/security-assessment applicability before offering a public AI service.
+- Prepare payment, order, subscription, invoice, refund, tax/reconciliation, abuse handling, support, monitoring, backups, restore test, log rotation, incident response, and server reboot recovery.
+- Explicitly keep "payment not production-integrated" in future launch checks until real WeChat Pay and Alipay merchant accounts, credentials, callbacks, order state transitions, recharge, subscription/cancellation/refund/invoice, and reconciliation are verified end to end.
 
 ## 发布链接暂不替换
 
