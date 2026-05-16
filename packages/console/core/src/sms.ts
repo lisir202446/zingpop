@@ -15,8 +15,7 @@ function apigConfigured(env: Record<string, string | undefined>) {
   return Boolean(
     (env.SMS_PROVIDER === "huawei_apig" || env.HUAWEI_APIG_SMS_URL) &&
       env.HUAWEI_APIG_SMS_URL &&
-      env.HUAWEI_APIG_APP_KEY &&
-      env.HUAWEI_APIG_APP_SECRET &&
+      (env.HUAWEI_APIG_APPCODE || (env.HUAWEI_APIG_APP_KEY && env.HUAWEI_APIG_APP_SECRET)) &&
       env.HUAWEI_APIG_SMS_CONTENT_TEMPLATE,
   )
 }
@@ -48,8 +47,9 @@ function apigConfig() {
   return {
     kind: "huawei_apig" as const,
     url: env("HUAWEI_APIG_SMS_URL"),
-    appKey: env("HUAWEI_APIG_APP_KEY"),
-    appSecret: env("HUAWEI_APIG_APP_SECRET"),
+    appCode: process.env.HUAWEI_APIG_APPCODE,
+    appKey: process.env.HUAWEI_APIG_APP_KEY,
+    appSecret: process.env.HUAWEI_APIG_APP_SECRET,
     contentTemplate: env("HUAWEI_APIG_SMS_CONTENT_TEMPLATE"),
     contentParam: process.env.HUAWEI_APIG_SMS_CONTENT_PARAM || "content",
     mobileParam: process.env.HUAWEI_APIG_SMS_MOBILE_PARAM || "mobile",
@@ -161,40 +161,51 @@ async function sendApigLoginCode(input: { phone: string; code: string }, current
     }),
   )
   const xSdkDate = huaweiTimestamp()
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: huaweiApigAuthorization({
+  const headers = new Headers({
+    "Content-Length": "0",
+    "User-Agent": current.userAgent,
+  })
+  if (current.appCode) {
+    headers.set("X-Apig-AppCode", current.appCode)
+  } else {
+    headers.set(
+      "Authorization",
+      huaweiApigAuthorization({
         method: "POST",
         url,
-        appKey: current.appKey,
-        appSecret: current.appSecret,
+        appKey: current.appKey ?? env("HUAWEI_APIG_APP_KEY"),
+        appSecret: current.appSecret ?? env("HUAWEI_APIG_APP_SECRET"),
         xSdkDate,
         userAgent: current.userAgent,
         stage: current.stage,
       }),
-      "Content-Length": "0",
-      "User-Agent": current.userAgent,
-      "X-Sdk-Date": xSdkDate,
-      "X-Stage": current.stage,
-    },
+    )
+    headers.set("X-Sdk-Date", xSdkDate)
+    headers.set("X-Stage", current.stage)
+  }
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
   })
   const result = (await response.json()) as {
     code?: string
     status?: string
+    ReturnStatus?: string
     description?: string
     error_msg?: string
     message?: string
+    Message?: string
     msg?: string
   }
-  const status = result.code ?? result.status
+  const status = result.code ?? result.status ?? result.ReturnStatus
+  const message = result.description ?? result.error_msg ?? result.message ?? result.Message ?? result.msg
 
   if (!response.ok) {
-    throw new Error(result.description ?? result.error_msg ?? result.message ?? result.msg ?? "Failed to send verification code")
+    throw new Error(message ?? "Failed to send verification code")
   }
 
-  if (status && !["0", "000000", "200", "OK", "Success", "success"].includes(status)) {
-    throw new Error(result.description ?? result.error_msg ?? result.message ?? result.msg ?? "Failed to send verification code")
+  if (status && !["0", "000000", "200", "OK", "Success", "success", "Sucess"].includes(status)) {
+    throw new Error(message ?? "Failed to send verification code")
   }
 }
 

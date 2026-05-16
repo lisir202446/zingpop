@@ -53,9 +53,11 @@ The console build previously failed when a SolidStart dev SSR manifest was compi
 
 Current auth status:
 
-- The phone auth page loads, but real registration/login/reset is not verified yet.
-- A registration-code request currently shows "Authentication service is not ready", which maps to database configuration/resource access failure before SMS sending.
-- Complete database env and migrations before testing Huawei Cloud SMS.
+- The phone auth page loads and writes `login_code` records on the server.
+- Database env is now loaded by `zingpop-console.service`.
+- The Huawei Cloud Marketplace SMS product expects `X-Apig-AppCode` simple authentication. Configure `HUAWEI_APIG_APPCODE`, not only AppKey/AppSecret.
+- The SMS content must include the provider-approved `【】` signature template: `【线粒体（广州）互联网有限公司】验证码：{code}。您正在进行身份验证，需要进行验证码校验（3分钟内有效），请勿向任何人提供此验证码。`.
+- Real registration/login/reset still requires an end-to-end SMS receipt test after the AppCode patch is deployed.
 
 ## Why Use app.zingpop.cn
 
@@ -102,6 +104,39 @@ Server sizing note:
 - ICP is now complete and the Huawei Cloud ECS/Flexus plan has been upgraded to `4 vCPU / 8 GiB`.
 - After the upgrade, `./scripts/production-build.sh` completed successfully on 2026-05-10.
 - If the console offers both `2 vCPU / 8 GiB` and `4 vCPU / 8 GiB`, prefer `4 vCPU / 8 GiB` when it is cheaper or comparable. Use `4 vCPU / 16 GiB` only if 8 GiB still fails.
+
+## Server Code Transfer Fallback
+
+Preferred normal flow is:
+
+```text
+local commit -> GitHub push -> server pulls or downloads that exact commit
+```
+
+If `git pull` hangs because the server cannot reach `https://github.com`, test GitHub codeload before trying slow manual uploads:
+
+```bash
+COMMIT=d8504ce
+curl -I --connect-timeout 10 --max-time 20 "https://codeload.github.com/lisir202446/zingpop/tar.gz/$COMMIT"
+```
+
+If codeload returns `HTTP 200`, download and extract that commit on the server:
+
+```bash
+cd /root
+COMMIT=d8504ce
+curl -L --connect-timeout 20 --max-time 300 \
+  -o "zingpop-$COMMIT.tar.gz" \
+  "https://codeload.github.com/lisir202446/zingpop/tar.gz/$COMMIT"
+rm -rf /root/zingpop-new-release
+mkdir -p /root/zingpop-new-release
+tar -xzf "/root/zingpop-$COMMIT.tar.gz" -C /root/zingpop-new-release --strip-components=1
+ls -la /root/zingpop-new-release | head
+```
+
+Then build and install from `/root/zingpop-new-release`.
+
+Do not paste GitHub tokens into terminal output shared in chat. If a token was embedded in `git remote -v` output, rotate it after the deployment is complete.
 
 ## Install systemd Guard
 
@@ -288,7 +323,7 @@ http://121.36.58.22:4096
 ```
 
 - Test phone registration, phone-password login, and forgot-password reset after the `account_password` migration is applied.
-- Verify Huawei Cloud SMS templates, signature, Access Key, and environment variables before relying on SMS login.
+- Verify Huawei Cloud Marketplace SMS AppCode, approved `【】` signature template, and environment variables before relying on SMS login.
 - Before production, expose only `80` and `443`; restrict SSH `22` to the user's fixed IP and close public access to `3000`, `3001`, and `4096`.
 - Prepare user agreement, privacy policy, data processing notes, third-party open-source notices, and dependency license audit during the ICP waiting period.
 - Continue multi-user isolation design before public launch:

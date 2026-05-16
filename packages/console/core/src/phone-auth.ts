@@ -10,7 +10,7 @@ import { Resource } from "@opencode-ai/console-resource"
 import { SMS } from "./sms"
 import { fn } from "./util/fn"
 
-export const LOGIN_CODE_TTL_MS = 5 * 60 * 1000
+export const LOGIN_CODE_TTL_MS = 3 * 60 * 1000
 export const LOGIN_CODE_RESEND_MS = 60 * 1000
 export const LOGIN_CODE_ATTEMPT_LIMIT = 5
 export const LOGIN_CODE_DAILY_LIMIT = 50

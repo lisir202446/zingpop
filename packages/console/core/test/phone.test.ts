@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   LOGIN_CODE_ATTEMPT_LIMIT,
+  LOGIN_CODE_TTL_MS,
   assertCanSendCode,
   assertCodeUsable,
 } from "../src/phone-auth"
@@ -45,6 +46,10 @@ describe("phone login", () => {
     ).toThrow("Verification code has expired")
   })
 
+  test("matches the approved sms template validity window", () => {
+    expect(LOGIN_CODE_TTL_MS).toBe(3 * 60 * 1000)
+  })
+
   test("rejects codes after too many invalid attempts", () => {
     expect(() =>
       assertCodeUsable({
@@ -80,6 +85,17 @@ describe("phone login", () => {
         HUAWEI_APIG_SMS_URL: "https://cdcxsms.apistore.huaweicloud.com/chuangxinsms/dxjk",
         HUAWEI_APIG_APP_KEY: "test-key",
         HUAWEI_APIG_APP_SECRET: "test-secret",
+        HUAWEI_APIG_SMS_CONTENT_TEMPLATE: "Your verification code is {code}",
+      }),
+    ).toBe(true)
+  })
+
+  test("recognizes Huawei APIG marketplace sms AppCode configuration", () => {
+    expect(
+      SMS.isConfigured({
+        SMS_PROVIDER: "huawei_apig",
+        HUAWEI_APIG_SMS_URL: "https://cdcxsms.apistore.huaweicloud.com/chuangxinsms/dxjk",
+        HUAWEI_APIG_APPCODE: "test-appcode",
         HUAWEI_APIG_SMS_CONTENT_TEMPLATE: "Your verification code is {code}",
       }),
     ).toBe(true)
@@ -140,5 +156,93 @@ describe("phone login", () => {
     expect(request.headers.get("x-stage")).toBe("RELEASE")
     expect(request.headers.get("authorization")).toContain("SDK-HMAC-SHA256 Access=test-key")
     expect(request.headers.get("authorization")).toContain("SignedHeaders=user-agent;x-sdk-date;x-stage")
+  })
+
+  test("sends Huawei APIG marketplace sms with AppCode authentication", async () => {
+    const previousFetch = globalThis.fetch
+    const requests: Array<{
+      url: string
+      method?: string
+      headers: Headers
+    }> = []
+
+    globalThis.fetch = Object.assign(
+      async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+        requests.push({
+          url: input.toString(),
+          method: init?.method,
+          headers: new Headers(init?.headers as ConstructorParameters<typeof Headers>[0]),
+        })
+
+        return new Response(JSON.stringify({ ReturnStatus: "Success" }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        })
+      },
+      { preconnect: previousFetch.preconnect },
+    )
+
+    process.env.SMS_PROVIDER = "huawei_apig"
+    process.env.HUAWEI_APIG_SMS_URL = "https://cdcxsms.apistore.huaweicloud.com/chuangxinsms/dxjk"
+    process.env.HUAWEI_APIG_APPCODE = "test-appcode"
+    process.env.HUAWEI_APIG_SMS_CONTENT_TEMPLATE = "【线粒体（广州）互联网有限公司】验证码：{code}。您正在进行身份验证，需要进行验证码校验（3分钟内有效），请勿向任何人提供此验证码。"
+
+    try {
+      await SMS.sendLoginCode({
+        phone: "18122488704",
+        code: "123456",
+      })
+    } finally {
+      globalThis.fetch = previousFetch
+      delete process.env.SMS_PROVIDER
+      delete process.env.HUAWEI_APIG_SMS_URL
+      delete process.env.HUAWEI_APIG_APPCODE
+      delete process.env.HUAWEI_APIG_SMS_CONTENT_TEMPLATE
+    }
+
+    const request = requests[0]
+    const url = new URL(request.url)
+    expect(request.method).toBe("POST")
+    expect(url.searchParams.get("content")).toBe("【线粒体（广州）互联网有限公司】验证码：123456。您正在进行身份验证，需要进行验证码校验（3分钟内有效），请勿向任何人提供此验证码。")
+    expect(url.searchParams.get("mobile")).toBe("18122488704")
+    expect(request.headers.get("x-apig-appcode")).toBe("test-appcode")
+    expect(request.headers.has("authorization")).toBe(false)
+  })
+
+  test("reports Huawei APIG marketplace sms business failures", async () => {
+    const previousFetch = globalThis.fetch
+
+    globalThis.fetch = Object.assign(
+      async () =>
+        new Response(JSON.stringify({ ReturnStatus: "Faild", Message: "短信必须带【】格式签名" }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+      { preconnect: previousFetch.preconnect },
+    )
+
+    process.env.SMS_PROVIDER = "huawei_apig"
+    process.env.HUAWEI_APIG_SMS_URL = "https://cdcxsms.apistore.huaweicloud.com/chuangxinsms/dxjk"
+    process.env.HUAWEI_APIG_APPCODE = "test-appcode"
+    process.env.HUAWEI_APIG_SMS_CONTENT_TEMPLATE = "Your verification code is {code}"
+
+    try {
+      await expect(
+        SMS.sendLoginCode({
+          phone: "18122488704",
+          code: "123456",
+        }),
+      ).rejects.toThrow("短信必须带【】格式签名")
+    } finally {
+      globalThis.fetch = previousFetch
+      delete process.env.SMS_PROVIDER
+      delete process.env.HUAWEI_APIG_SMS_URL
+      delete process.env.HUAWEI_APIG_APPCODE
+      delete process.env.HUAWEI_APIG_SMS_CONTENT_TEMPLATE
+    }
   })
 })

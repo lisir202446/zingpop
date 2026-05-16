@@ -208,13 +208,22 @@ APP_STAGE=production
 NODE_ENV=production
 ZEN_SESSION_SECRET=<随机32位以上字符串>
 
-# 华为云短信（去华为云短信服务申请）
+# 华为云短信（传统华为云短信服务）
 HUAWEI_SMS_ENDPOINT=https://smsapi.cn-north-4.myhuaweicloud.com
 HUAWEI_SMS_APP_KEY=<应用Key>
 HUAWEI_SMS_APP_SECRET=<应用Secret>
 HUAWEI_SMS_SENDER=<签名通道号>
 HUAWEI_SMS_TEMPLATE_ID=<验证码模板ID>
 HUAWEI_SMS_SIGNATURE=<短信签名>
+
+# 华为云云商店 APIG 短信接口（请求示例为 X-Apig-AppCode 时使用）
+SMS_PROVIDER=huawei_apig
+HUAWEI_APIG_SMS_URL=https://cdcxsms.apistore.huaweicloud.com/chuangxinsms/dxjk
+HUAWEI_APIG_APPCODE=<AppCode>
+HUAWEI_APIG_SMS_CONTENT_TEMPLATE=【线粒体（广州）互联网有限公司】验证码：{code}。您正在进行身份验证，需要进行验证码校验（3分钟内有效），请勿向任何人提供此验证码。
+HUAWEI_APIG_SMS_CONTENT_PARAM=content
+HUAWEI_APIG_SMS_MOBILE_PARAM=mobile
+HUAWEI_APIG_STAGE=RELEASE
 
 # 微信支付（去微信支付商户平台申请，需营业执照）
 WECHAT_PAY_APP_ID=<APPID>
