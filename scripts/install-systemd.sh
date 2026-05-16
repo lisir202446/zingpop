@@ -53,12 +53,21 @@ install -d -o zingpop -g zingpop /var/log/zingpop
 install -d /etc/zingpop
 install -d /opt/zingpop
 install -d /opt/zingpop/bin
+install -d -o zingpop -g zingpop /opt/zingpop/app
 install -d -o zingpop -g zingpop /opt/zingpop/console
 
 if [[ -x "$ROOT_DIR/packages/opencode/dist/opencode-linux-x64/bin/opencode" ]]; then
   install -m 755 "$ROOT_DIR/packages/opencode/dist/opencode-linux-x64/bin/opencode" /opt/zingpop/bin/opencode
 else
   echo "Missing Linux opencode binary. Run ./scripts/production-build.sh on the server before starting the service." >&2
+fi
+
+if [[ -d "$ROOT_DIR/packages/app/dist" ]]; then
+  rm -rf /opt/zingpop/app/dist
+  cp -a "$ROOT_DIR/packages/app/dist" /opt/zingpop/app/dist
+  chown -R zingpop:zingpop /opt/zingpop/app
+else
+  echo "Missing opencode web UI assets. Run ./scripts/production-build.sh on the server before updating Nginx." >&2
 fi
 
 if [[ -f "$ROOT_DIR/packages/console/app/.output/server/index.mjs" ]]; then
