@@ -88,6 +88,15 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "Created $ENV_FILE. Edit it before starting services."
 fi
 
+install -d /etc/nginx/snippets
+
+if [[ -n "$(sed -n 's/^OPENCODE_SERVER_USERNAME=//p' "$ENV_FILE")" && -n "$(sed -n 's/^OPENCODE_SERVER_PASSWORD=//p' "$ENV_FILE")" ]]; then
+  printf 'proxy_set_header Authorization "Basic %s";\n' "$(printf "%s:%s" "$(sed -n 's/^OPENCODE_SERVER_USERNAME=//p' "$ENV_FILE")" "$(sed -n 's/^OPENCODE_SERVER_PASSWORD=//p' "$ENV_FILE")" | base64 -w 0)" > /etc/nginx/snippets/zingpop-opencode-basic-auth.conf
+  chmod 600 /etc/nginx/snippets/zingpop-opencode-basic-auth.conf
+else
+  echo "Missing OPENCODE_SERVER_USERNAME or OPENCODE_SERVER_PASSWORD in $ENV_FILE. Nginx app proxy Basic Auth snippet was not updated." >&2
+fi
+
 install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-opencode.service" /etc/systemd/system/zingpop-opencode.service
 install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-console.service" /etc/systemd/system/zingpop-console.service
 systemctl daemon-reload
