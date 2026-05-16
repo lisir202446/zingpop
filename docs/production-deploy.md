@@ -55,6 +55,8 @@ Current auth status:
 
 - The phone auth page loads and writes `login_code` records on the server.
 - Database env is now loaded by `zingpop-console.service`.
+- The expected post-login workbench page is the embedded opencode UI at `https://app.zingpop.cn/<server-workspace-slug>/prompts`, showing `Prompt Templates`, the left template list, and `Preview` / `Get Prompt` / `View Source`.
+- Do not validate the current workbench by opening `www.zingpop.cn/workspace/...` console pages or local `localhost:4096` browser state. Those can show older console/workbench entry points while the production binary already contains the prompt-template UI.
 - The Huawei Cloud Marketplace SMS product expects `X-Apig-AppCode` simple authentication. Configure `HUAWEI_APIG_APPCODE`, not only AppKey/AppSecret.
 - The SMS content must include the provider-approved `【】` signature template: `【线粒体（广州）互联网有限公司】验证码：{code}。您正在进行身份验证，需要进行验证码校验（3分钟内有效），请勿向任何人提供此验证码。`.
 - Real registration/login/reset still requires an end-to-end SMS receipt test after the AppCode patch is deployed.
@@ -222,6 +224,14 @@ systemctl reload nginx
 ```
 
 Only enable these configs after `zingpop-console` is listening on `127.0.0.1:3000`; `zingpop-app.conf` depends on `/auth/status` through Nginx `auth_request`.
+
+When an unauthenticated user opens `app.zingpop.cn`, the app Nginx config must redirect to phone auth with a `continue` target, for example:
+
+```text
+https://www.zingpop.cn/auth/phone?continue=https%3A%2F%2Fapp.zingpop.cn%2F...
+```
+
+Without that `continue` target, a successful login can fall back to the product console workspace page instead of returning to the embedded workbench.
 
 After Nginx is the public entry, remove public security-group access to port `4096`. Keep only `80` and `443` public, plus restricted SSH.
 

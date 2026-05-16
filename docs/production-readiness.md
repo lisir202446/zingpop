@@ -282,6 +282,8 @@ default backend = location.origin
 - opencode already supports this when the web UI is served outside Vite dev mode.
 - The production path uses the existing opencode build that embeds `packages/app` into the backend binary.
 - Serve the workbench on its own origin (`app.zingpop.cn`) so no frontend routing changes are needed.
+- Validate the current Zingpop workbench on `https://app.zingpop.cn/<server-workspace-slug>/prompts`. The expected UI starts with `Prompt Templates` and includes the template list plus `Preview` / `Get Prompt` / `View Source`.
+- Do not validate this flow by opening `www.zingpop.cn/workspace/...` console pages or old `localhost:4096` browser state. Those routes are not the current prompt-template workbench target.
 
 ### 5. Backend Security
 

@@ -13,7 +13,8 @@ import { useAuthSession } from "~/context/auth"
 import { useI18n } from "~/context/i18n"
 import { i18n } from "~/i18n"
 import { localizeError, formError } from "~/lib/form-error"
-import { localeFromRequest, route } from "~/lib/language"
+import { authSuccessRedirectLocation } from "~/lib/workbench-redirect"
+import { localeFromRequest } from "~/lib/language"
 
 function readIP() {
   const request = getRequestEvent()?.request
@@ -65,7 +66,7 @@ async function startPhoneSession(input: { accountID: string; phone: string; requ
     current: input.accountID,
   }))
 
-  return redirect(route(localeFromRequest(input.request), input.next || `/workspace/${workspaceID}/home`))
+  return redirect(authSuccessRedirectLocation(input.request, input.next, `/workspace/${workspaceID}/home`))
 }
 
 function readPhone(form: FormData) {
