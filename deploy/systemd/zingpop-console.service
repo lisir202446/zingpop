@@ -10,6 +10,11 @@ User=zingpop
 Group=zingpop
 EnvironmentFile=/etc/zingpop/zingpop.env
 Environment=NODE_ENV=production
+Environment=HOME=/srv/zingpop
+Environment=XDG_DATA_HOME=/srv/zingpop/data
+Environment=XDG_CONFIG_HOME=/srv/zingpop/config
+Environment=XDG_CACHE_HOME=/srv/zingpop/cache
+Environment=XDG_STATE_HOME=/srv/zingpop/state
 WorkingDirectory=/opt/zingpop/console/.output
 ExecStart=/bin/sh -lc 'exec env HOST="${ZINGPOP_CONSOLE_HOST:-127.0.0.1}" PORT="${ZINGPOP_CONSOLE_PORT:-3000}" /usr/bin/env node ./server/index.mjs'
 Restart=always
@@ -21,7 +26,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/srv/zingpop /var/log/zingpop /opt/zingpop/console /home/zingpop
+ReadWritePaths=/srv/zingpop /var/log/zingpop /opt/zingpop/console
 
 StandardOutput=append:/var/log/zingpop/console.log
 StandardError=append:/var/log/zingpop/console.err.log

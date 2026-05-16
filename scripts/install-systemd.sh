@@ -30,14 +30,25 @@ if [[ ! -x /usr/local/bin/bun ]]; then
   install -Dm755 "$(command -v bun)" /usr/local/bin/bun
 fi
 
-id zingpop >/dev/null 2>&1 || useradd --system --create-home --home-dir /home/zingpop --shell /usr/sbin/nologin zingpop
+if id zingpop >/dev/null 2>&1; then
+  usermod --home /srv/zingpop zingpop >/dev/null 2>&1 || true
+else
+  useradd --system --home-dir /srv/zingpop --shell /usr/sbin/nologin zingpop
+fi
 
+install -d -o zingpop -g zingpop /srv/zingpop
 install -d -o zingpop -g zingpop /srv/zingpop/workspaces
 install -d -o zingpop -g zingpop /srv/zingpop/workspaces/default
 install -d -o zingpop -g zingpop /srv/zingpop/data
 install -d -o zingpop -g zingpop /srv/zingpop/config
 install -d -o zingpop -g zingpop /srv/zingpop/cache
 install -d -o zingpop -g zingpop /srv/zingpop/state
+install -d -o zingpop -g zingpop /srv/zingpop/data/opencode
+install -d -o zingpop -g zingpop /srv/zingpop/config/opencode
+install -d -o zingpop -g zingpop /srv/zingpop/cache/opencode
+install -d -o zingpop -g zingpop /srv/zingpop/cache/opencode/bin
+install -d -o zingpop -g zingpop /srv/zingpop/state/opencode
+install -d -o zingpop -g zingpop /srv/zingpop/data/opencode/log
 install -d -o zingpop -g zingpop /var/log/zingpop
 install -d /etc/zingpop
 install -d /opt/zingpop
