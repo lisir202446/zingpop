@@ -540,10 +540,14 @@
 
 .prompt-content {
   display: grid;
+  flex: 1;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: stretch;
   gap: 16px;
+  height: 100%;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 16px;
 }
 
@@ -552,6 +556,12 @@
   border-radius: var(--radius-xl);
   background: var(--background-base);
   overflow: hidden;
+}
+
+.prompt-preview-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .prompt-panel-head {
@@ -577,7 +587,8 @@
 }
 
 .prompt-preview-shell {
-  height: min(58vh, 560px);
+  flex: 1;
+  height: 100%;
   min-height: 420px;
   overflow: hidden;
   background: #fff;
