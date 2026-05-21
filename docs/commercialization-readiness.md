@@ -53,12 +53,20 @@ Operational reference:
 
 This is the largest product security blocker.
 
-- Define `account_id -> workspace_id -> project_id -> filesystem directory`.
-- Prevent users from entering arbitrary server paths.
-- Prevent access to `/root`, `/srv/zingpop/workspaces/default`, other users' directories, and shared server paths.
-- Add authorization checks before reading projects, sessions, files, terminals, command execution, logs, and model-call artifacts.
-- Make every project/session/file operation tenant-scoped.
-- Add tests for cross-user access denial.
+- Implementation checkpoint on 2026-05-21:
+  - `packages/console/core/src/workbench.ts` defines the server-authorized mapping from `account_id` membership to `workspace_id -> project_id -> filesystem directory`.
+  - Authenticated workbench directories now resolve to `$ZINGPOP_WORKSPACE_ROOT/<workspace_id>/projects/<project_id>` instead of `/srv/zingpop/workspaces/default`.
+  - `packages/console/app/src/routes/auth/status.ts` emits the authorized `X-Opencode-Directory`, `X-Opencode-Workspace`, `X-Zingpop-Workspace-ID`, and `X-Zingpop-Project-ID` headers.
+  - `deploy/nginx/zingpop-app.conf` takes those headers from `auth_request` and prepends the authorized directory/workspace to proxied opencode requests before any client query string.
+  - Session-id routes now get an additional auth subrequest check that rejects sessions whose stored directory does not match the current authorized workspace project directory.
+  - The public app host filters `/global/event` through the console auth layer and blocks shared `/sync`, `/tui`, `/global/dispose`, `/global/upgrade`, and `/instance/dispose` routes.
+  - Login redirects now send users to their own workspace project directory when the app auth gate redirects through `https://app.zingpop.cn/`.
+- Remaining launch-gate verification:
+  - Deploy and verify the production Nginx config and console app build.
+  - Probe that client-supplied `directory=/root`, `/srv/zingpop/workspaces/default`, and another user's directory do not win over the server-authorized directory.
+  - Add broader end-to-end checks before reading projects, sessions, files, terminals, command execution, event streams, logs, and model-call artifacts.
+  - Make every project/session/file operation tenant-scoped in production verification, not only login entry scoped.
+  - Add real cross-account denial tests against a running workbench instance.
 - Keep any opencode core change out of scope unless the user explicitly approves the exact low-level tradeoff.
 
 ### 5. Personal Information And Data Compliance

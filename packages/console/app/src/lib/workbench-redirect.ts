@@ -25,17 +25,32 @@ function defaultWorkspaceDirectory() {
   return `${(process.env.ZINGPOP_WORKSPACE_ROOT ?? "/srv/zingpop/workspaces").replace(/\/+$/, "")}/default`
 }
 
-function defaultWorkbenchLocation() {
+const safeSegment = /^[A-Za-z0-9_-]+$/
+
+function defaultProjectID() {
+  return process.env.ZINGPOP_DEFAULT_PROJECT_ID?.trim() || "default"
+}
+
+function workspaceDirectory(workspaceID: string | undefined) {
+  if (!workspaceID || !safeSegment.test(workspaceID)) return defaultWorkspaceDirectory()
+  return `${(process.env.ZINGPOP_WORKSPACE_ROOT ?? "/srv/zingpop/workspaces").replace(/\/+$/, "")}/${workspaceID}/projects/${defaultProjectID()}`
+}
+
+function defaultWorkbenchLocation(workspaceID?: string) {
   const origin = appOrigin()
   if (!origin) return
-  return `${origin}/${base64Encode(defaultWorkspaceDirectory())}/prompts`
+  return `${origin}/${base64Encode(workspaceDirectory(workspaceID))}/prompts`
 }
 
 function isLocalHttp(url: URL) {
   return url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1")
 }
 
-function safeRedirectLocation(request: Request, target: string) {
+function isAppRoot(url: URL) {
+  return host(process.env.ZINGPOP_APP_DOMAIN) === url.host && url.pathname === "/" && !url.search && !url.hash
+}
+
+function safeRedirectLocation(request: Request, target: string, workspaceID?: string) {
   const value = target.trim()
   if (!value) return
   if (value.startsWith("/") && !value.startsWith("//")) return route(localeFromRequest(request), value)
@@ -50,9 +65,10 @@ function safeRedirectLocation(request: Request, target: string) {
     ),
   )
   if (!allowed.has(url.host)) return
+  if (isAppRoot(url)) return defaultWorkbenchLocation(workspaceID)
   return url.toString()
 }
 
-export function authSuccessRedirectLocation(request: Request, next: string, fallback: string) {
-  return safeRedirectLocation(request, next) ?? defaultWorkbenchLocation() ?? route(localeFromRequest(request), fallback)
+export function authSuccessRedirectLocation(request: Request, next: string, fallback: string, workspaceID?: string) {
+  return safeRedirectLocation(request, next, workspaceID) ?? defaultWorkbenchLocation(workspaceID) ?? route(localeFromRequest(request), fallback)
 }

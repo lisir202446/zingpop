@@ -66,7 +66,7 @@ async function startPhoneSession(input: { accountID: string; phone: string; requ
     current: input.accountID,
   }))
 
-  return redirect(authSuccessRedirectLocation(input.request, input.next, `/workspace/${workspaceID}/home`))
+  return redirect(authSuccessRedirectLocation(input.request, input.next, `/workspace/${workspaceID}/home`, workspaceID))
 }
 
 function readPhone(form: FormData) {
