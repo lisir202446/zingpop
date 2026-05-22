@@ -254,8 +254,13 @@ Current authenticated workbench isolation status:
 
 Before broad public paid launch, Zingpop still needs:
 
-- A clean redeploy from commit `de409d112251ae250dd8b8a2900011db91411494` or later, replacing the current hot-patched server state.
-- A repeatable production isolation probe script or runbook.
+- A clean redeploy from the latest `main`, replacing the current hot-patched server state.
+- The repeatable production isolation probe must pass:
+
+```bash
+bun scripts/production-isolation-probe.mjs --mode all
+```
+
 - Authorization checks verified before opening projects, files, terminals, commands, logs, and model-call artifacts.
 - A product-level project creation/import flow.
 
@@ -344,5 +349,5 @@ http://121.36.58.22:4096
 - Prepare user agreement, privacy policy, data processing notes, third-party open-source notices, and dependency license audit during the ICP waiting period.
 - Continue broader tenant-scope checks before public launch:
   - Verify project, file, terminal, command, log, and model-call paths use the authenticated workspace directory.
-  - Preserve the authenticated isolation probe as a repeatable deployment check.
+  - Preserve `scripts/production-isolation-probe.mjs` as a repeatable deployment check.
   - Prevent regressions that let users enter raw server paths such as `/root/zingpop`.

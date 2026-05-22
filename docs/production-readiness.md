@@ -237,8 +237,8 @@ Verified live:
 
 Remaining before broad public paid use:
 
-- Clean redeploy from commit `de409d112251ae250dd8b8a2900011db91411494` or later so the server is not relying on hot patches.
-- Add a repeatable production probe script or runbook.
+- Clean redeploy from the latest `main` so the server is not relying on hot patches.
+- Run the repeatable production probe with `bun scripts/production-isolation-probe.mjs --mode all`.
 - Extend tenant-scope verification to file browsing, terminals, command execution, logs, model-call artifacts, and project import/creation.
 
 ## Remaining Work

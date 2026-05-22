@@ -36,8 +36,8 @@ Important deployment note: the live server is correct after hot patching, but th
 
 Next work from this checkpoint:
 
-- Convert the ad hoc `/tmp/zingpop-auth-isolation-probe.mjs` server probe into a repeatable repo script or documented runbook.
-- Do a clean production redeploy from `de409d112251ae250dd8b8a2900011db91411494` or later, then rerun `nginx -t`, service restarts, unauthenticated probes, and authenticated probes.
+- The ad hoc `/tmp/zingpop-auth-isolation-probe.mjs` probe has been converted into `scripts/production-isolation-probe.mjs`.
+- Do a clean production redeploy from the latest `main`, then rerun `nginx -t`, service restarts, and `bun scripts/production-isolation-probe.mjs --mode all`.
 - Verify the real logged-in workbench UI opens end to end through `https://app.zingpop.cn`.
 - Verify a real model request through the production workbench.
 - Extend tenant-scope verification beyond sessions/events to file browsing, terminal/command execution, logs, model-call artifacts, and project import/creation.
@@ -92,8 +92,8 @@ The core authenticated workbench isolation probe passed on 2026-05-22. Treat thi
   - The live Nginx config was repaired from the committed template and verified with `nginx -t`.
   - The authenticated isolation probe passed for `directory=/root`, shared default directory override, another user's directory override, cross-user session id access, client `workspace` injection, and `/global/event` filtering.
 - Remaining launch-gate verification:
-  - Replace the current hot-patched server state with a clean production build/install from commit `de409d112251ae250dd8b8a2900011db91411494` or later.
-  - Preserve a repeatable production probe for future deployments.
+  - Replace the current hot-patched server state with a clean production build/install from the latest `main`.
+  - Run `bun scripts/production-isolation-probe.mjs --mode all` after every future deployment.
   - Add broader end-to-end checks before reading projects, sessions, files, terminals, command execution, event streams, logs, and model-call artifacts.
   - Make every project/session/file operation tenant-scoped in production verification, not only login entry scoped.
 - Keep any opencode core change out of scope unless the user explicitly approves the exact low-level tradeoff.

@@ -7,7 +7,15 @@ cd "$ROOT_DIR"
 
 export NODE_ENV=production
 
-bun install --frozen-lockfile
+if [[ "${ZINGPOP_SKIP_BUN_INSTALL:-0}" == "1" ]]; then
+  if [[ ! -d node_modules ]]; then
+    echo "ZINGPOP_SKIP_BUN_INSTALL=1 was set, but node_modules is missing." >&2
+    exit 1
+  fi
+  echo "Using existing node_modules; ZINGPOP_SKIP_BUN_INSTALL=1."
+else
+  bun install --frozen-lockfile
+fi
 
 # Existing opencode build embeds packages/app into the server binary. This keeps
 # the workbench and backend on one origin in production.
