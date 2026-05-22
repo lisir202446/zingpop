@@ -134,6 +134,20 @@ async function runUnauthenticatedProbes() {
   const workspaceOverride = await fetchText("app /?workspace=wrk_fake", appURL("/", { workspace: "wrk_fake" }))
   check(workspaceOverride.response.status === 403, "unauth workspace query injection is blocked", `HTTP ${workspaceOverride.response.status}`)
 
+  for (const target of [
+    "/site.webmanifest",
+    "/favicon-v3.ico",
+    "/favicon-v3.svg",
+    "/favicon-96x96-v3.png",
+    "/apple-touch-icon-v3.png",
+    "/oc-theme-preload.js",
+  ]) {
+    const result = await fetchText(`app ${target}`, appURL(target))
+    check(result.response.status === 200, `${target} is served without auth redirect`, `HTTP ${result.response.status}`)
+    check(!result.location, `${target} does not redirect to product auth`, result.location ?? "")
+    check(!result.text.includes("/auth/phone"), `${target} does not return the login page`, result.text.slice(0, 200))
+  }
+
   for (const target of ["/sync/history", "/tui/select-session", "/global/dispose", "/instance/dispose"]) {
     const result = await fetchText(`app ${target}`, appURL(target))
     check(result.response.status === 403, `${target} is blocked without auth`, `HTTP ${result.response.status}`)
