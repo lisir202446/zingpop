@@ -123,7 +123,6 @@ export namespace Workbench {
   export function opencodeURL(input: { pathname: string; access: Access; env?: Record<string, string | undefined> }) {
     const url = new URL(input.pathname, opencodeOrigin(input.env))
     url.searchParams.set("directory", input.access.directory)
-    url.searchParams.set("workspace", input.access.workspaceID)
     return url
   }
 

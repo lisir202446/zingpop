@@ -12,7 +12,8 @@ describe("nginx workbench isolation", () => {
   })
 
   test("prepends the authorized directory before any client query string", () => {
-    expect(config).toContain("proxy_pass http://127.0.0.1:4096$uri?directory=$zingpop_directory&workspace=$zingpop_workspace&$args;")
+    expect(config).toContain("proxy_pass http://127.0.0.1:4096$uri?directory=$zingpop_directory&$args;")
+    expect(config).not.toContain("workspace=$zingpop_workspace")
   })
 
   test("filters event streams and blocks shared management routes on the public app host", () => {

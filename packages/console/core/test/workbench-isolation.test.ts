@@ -55,6 +55,23 @@ describe("workbench isolation", () => {
     expect(Workbench.sessionIDFromOriginalURI("/event")).toBeUndefined()
   })
 
+  test("does not send zingpop workspace ids to opencode workspace routing", () => {
+    const url = Workbench.opencodeURL({
+      pathname: "/session/ses_123",
+      access: {
+        workspaceID: "wrk_123",
+        projectID: "default",
+        directory: "/srv/zingpop/workspaces/wrk_123/projects/default",
+      },
+      env: {
+        ZINGPOP_OPENCODE_ORIGIN: "http://127.0.0.1:4096",
+      },
+    })
+
+    expect(url.searchParams.get("directory")).toBe("/srv/zingpop/workspaces/wrk_123/projects/default")
+    expect(url.searchParams.has("workspace")).toBe(false)
+  })
+
   test("blocks public access to shared management routes", () => {
     expect(Workbench.routeAllowed({ originalURI: "/global/config", method: "GET" })).toBe(true)
     expect(Workbench.routeAllowed({ originalURI: "/global/config", method: "PATCH" })).toBe(false)
