@@ -8,6 +8,7 @@ describe("nginx workbench isolation", () => {
     expect(config).toContain("proxy_set_header X-Opencode-Directory $zingpop_directory;")
     expect(config).toContain("proxy_set_header X-Opencode-Workspace $zingpop_workspace;")
     expect(config).toContain("proxy_set_header X-Original-Method $request_method;")
+    expect(config).not.toContain('if ($zingpop_directory = "")')
   })
 
   test("prepends the authorized directory before any client query string", () => {
