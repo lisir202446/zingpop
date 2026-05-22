@@ -32,12 +32,23 @@ Verified on `https://app.zingpop.cn` with two temporary authenticated accounts:
 - `/global/event` streamed A's own event and did not leak B's event, directory, or workspace metadata.
 - Final live probe result: `ALL AUTHENTICATED ISOLATION PROBES PASSED`.
 
-Important deployment note: the live server is correct after hot patching, but the next formal deployment must rebuild and install from commit `de409d112251ae250dd8b8a2900011db91411494` or a later commit. Do not deploy an older archive or Nginx template, or the `directory` query handling can regress.
+Historical deployment note: this first verification was performed on a hot-patched server state. That state was later replaced by the clean production redeploy recorded below. Do not deploy an archive or Nginx template older than commit `de409d112251ae250dd8b8a2900011db91411494`, or the `directory` query handling can regress.
+
+### 2026-05-22: Clean Production Redeploy And Repeatable Isolation Probe Passed
+
+The server was rebuilt and reinstalled from clean release commit `105ea9c7974628af28dabd027ba28a01a8c3c37e`, replacing the hot-patched state with committed source, Nginx templates, and systemd artifacts.
+
+Production deployment evidence:
+
+- `scripts/production-build.sh` completed successfully with `ZINGPOP_SKIP_BUN_INSTALL=1` while reusing the verified dependency tree.
+- `scripts/install-systemd.sh` installed the workbench and console artifacts.
+- `deploy/nginx/zingpop-app.conf` and `deploy/nginx/zingpop-www.conf` were installed to the active Nginx targets.
+- `nginx -t` passed.
+- `zingpop-console.service`, `zingpop-opencode.service`, and `nginx.service` restarted and were active.
+- `bun scripts/production-isolation-probe.mjs --mode all` passed on production with final result `ALL PRODUCTION ISOLATION PROBES PASSED`.
 
 Next work from this checkpoint:
 
-- The ad hoc `/tmp/zingpop-auth-isolation-probe.mjs` probe has been converted into `scripts/production-isolation-probe.mjs`.
-- Do a clean production redeploy from the latest `main`, then rerun `nginx -t`, service restarts, and `bun scripts/production-isolation-probe.mjs --mode all`.
 - Verify the real logged-in workbench UI opens end to end through `https://app.zingpop.cn`.
 - Verify a real model request through the production workbench.
 - Extend tenant-scope verification beyond sessions/events to file browsing, terminal/command execution, logs, model-call artifacts, and project import/creation.
@@ -91,8 +102,9 @@ The core authenticated workbench isolation probe passed on 2026-05-22. Treat thi
   - Commit `de409d112251ae250dd8b8a2900011db91411494` removes Zingpop workspace ids from opencode's `workspace` query routing, rejects client-supplied `workspace`, and drops client-supplied `directory` query parameters before proxying.
   - The live Nginx config was repaired from the committed template and verified with `nginx -t`.
   - The authenticated isolation probe passed for `directory=/root`, shared default directory override, another user's directory override, cross-user session id access, client `workspace` injection, and `/global/event` filtering.
+  - Commit `105ea9c7974628af28dabd027ba28a01a8c3c37e` adds the repeatable `scripts/production-isolation-probe.mjs` deployment check and was cleanly deployed to production.
+  - The clean production redeploy passed `nginx -t`, service restart checks, and `bun scripts/production-isolation-probe.mjs --mode all` with `ALL PRODUCTION ISOLATION PROBES PASSED`.
 - Remaining launch-gate verification:
-  - Replace the current hot-patched server state with a clean production build/install from the latest `main`.
   - Run `bun scripts/production-isolation-probe.mjs --mode all` after every future deployment.
   - Add broader end-to-end checks before reading projects, sessions, files, terminals, command execution, event streams, logs, and model-call artifacts.
   - Make every project/session/file operation tenant-scoped in production verification, not only login entry scoped.

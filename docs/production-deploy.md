@@ -251,11 +251,12 @@ Current authenticated workbench isolation status:
 - User accounts and sessions exist for the phone/password product auth flow.
 - Per-user workbench directories map to `/srv/zingpop/workspaces/<workspace_id>/projects/<project_id>`.
 - The 2026-05-22 production probe passed for arbitrary `directory` override, shared default directory override, cross-user directory override, cross-user session ids, client `workspace` query injection, and `/global/event` filtering.
+- The clean redeploy from commit `105ea9c7974628af28dabd027ba28a01a8c3c37e` replaced the hot-patched server state with committed source, Nginx templates, and systemd artifacts.
+- After the clean redeploy, `nginx -t`, service restarts, and `bun scripts/production-isolation-probe.mjs --mode all` passed with `ALL PRODUCTION ISOLATION PROBES PASSED`.
 
 Before broad public paid launch, Zingpop still needs:
 
-- A clean redeploy from the latest `main`, replacing the current hot-patched server state.
-- The repeatable production isolation probe must pass:
+- The repeatable production isolation probe must pass after every future deployment:
 
 ```bash
 bun scripts/production-isolation-probe.mjs --mode all
@@ -349,5 +350,5 @@ http://121.36.58.22:4096
 - Prepare user agreement, privacy policy, data processing notes, third-party open-source notices, and dependency license audit during the ICP waiting period.
 - Continue broader tenant-scope checks before public launch:
   - Verify project, file, terminal, command, log, and model-call paths use the authenticated workspace directory.
-  - Preserve `scripts/production-isolation-probe.mjs` as a repeatable deployment check.
+  - Preserve `scripts/production-isolation-probe.mjs` as a repeatable deployment check and run it after every deploy.
   - Prevent regressions that let users enter raw server paths such as `/root/zingpop`.

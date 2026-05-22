@@ -47,6 +47,9 @@ Infrastructure status:
 Build status:
 
 - `scripts/production-build.sh` completed successfully after the memory upgrade.
+- Clean production redeploy from commit `105ea9c7974628af28dabd027ba28a01a8c3c37e` completed on 2026-05-22.
+- `nginx -t` passed after reinstalling the committed `deploy/nginx/zingpop-app.conf` and `deploy/nginx/zingpop-www.conf` templates.
+- `zingpop-console.service`, `zingpop-opencode.service`, and `nginx.service` restarted and were active after the clean redeploy.
 - Console output was checked for `@manifest` / `assetsPath` dev SSR imports before and after install:
 
 ```text
@@ -235,10 +238,15 @@ Verified live:
 - Cross-user session ids were rejected.
 - `/global/event` did not leak another user's event, directory, or workspace metadata.
 
+Verified again after clean redeploy from commit `105ea9c7974628af28dabd027ba28a01a8c3c37e`:
+
+- `nginx -t` passed.
+- `zingpop-console.service`, `zingpop-opencode.service`, and `nginx.service` restarted and were active.
+- `bun scripts/production-isolation-probe.mjs --mode all` returned `ALL PRODUCTION ISOLATION PROBES PASSED`.
+
 Remaining before broad public paid use:
 
-- Clean redeploy from the latest `main` so the server is not relying on hot patches.
-- Run the repeatable production probe with `bun scripts/production-isolation-probe.mjs --mode all`.
+- Run the repeatable production probe with `bun scripts/production-isolation-probe.mjs --mode all` after every future deployment.
 - Extend tenant-scope verification to file browsing, terminals, command execution, logs, model-call artifacts, and project import/creation.
 
 ## Remaining Work
