@@ -12,8 +12,14 @@ describe("nginx workbench isolation", () => {
   })
 
   test("prepends the authorized directory before any client query string", () => {
-    expect(config).toContain("proxy_pass http://127.0.0.1:4096$uri?directory=$zingpop_directory&$args;")
+    expect(config).toContain("proxy_pass http://127.0.0.1:4096$uri?directory=$zingpop_directory&$zingpop_client_args;")
     expect(config).not.toContain("workspace=$zingpop_workspace")
+  })
+
+  test("drops client supplied directory parameters before proxying", () => {
+    expect(config).toContain("set $zingpop_client_args $args;")
+    expect(config).toContain('if ($arg_directory != "")')
+    expect(config).toContain("set $zingpop_client_args \"\";")
   })
 
   test("rejects client supplied opencode workspace routing parameters", () => {
