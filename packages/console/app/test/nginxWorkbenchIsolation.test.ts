@@ -16,6 +16,11 @@ describe("nginx workbench isolation", () => {
     expect(config).not.toContain("workspace=$zingpop_workspace")
   })
 
+  test("rejects client supplied opencode workspace routing parameters", () => {
+    expect(config).toContain('if ($arg_workspace != "")')
+    expect(config).toContain("return 403;")
+  })
+
   test("filters event streams and blocks shared management routes on the public app host", () => {
     expect(config).toContain("location = /global/event")
     expect(config).toContain("proxy_pass http://127.0.0.1:3000/auth/workbench/event;")
