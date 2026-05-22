@@ -15,7 +15,33 @@ Do not treat Zingpop as ready for full commercialization until all launch blocke
 - Public HTTPS entry is already deployed for `https://www.zingpop.cn` and `https://app.zingpop.cn`.
 - The production path uses Nginx, systemd, `127.0.0.1:3000` for product/auth, and `127.0.0.1:4096` for the opencode workbench backend.
 - Current infrastructure is suitable for protected staging or controlled internal testing.
-- It is not yet suitable for broad public paid use until authentication, SMS, real payment integration, multi-user isolation, legal/compliance materials, license review, operations, and commercial workflows are completed.
+- It is not yet suitable for broad public paid use until production auth/SMS verification, real payment integration, broader tenant-scope end-to-end verification, legal/compliance materials, license review, operations, and commercial workflows are completed.
+
+## Progress Log
+
+### 2026-05-22: Authenticated Workbench Isolation Probe Passed
+
+Production was hot-patched and verified on the Huawei Cloud host after the isolation fixes were pushed through commit `de409d112251ae250dd8b8a2900011db91411494`.
+
+Verified on `https://app.zingpop.cn` with two temporary authenticated accounts:
+
+- A logged-in request with `?directory=/root` was forced back to A's authorized workspace project directory.
+- Attempts to use the shared default directory and B's workspace directory were also forced back to A's authorized directory.
+- Client-supplied `?workspace=...` was rejected by Nginx with `403`.
+- A could read A's own session, but A could not read B's session and B could not read A's session.
+- `/global/event` streamed A's own event and did not leak B's event, directory, or workspace metadata.
+- Final live probe result: `ALL AUTHENTICATED ISOLATION PROBES PASSED`.
+
+Important deployment note: the live server is correct after hot patching, but the next formal deployment must rebuild and install from commit `de409d112251ae250dd8b8a2900011db91411494` or a later commit. Do not deploy an older archive or Nginx template, or the `directory` query handling can regress.
+
+Next work from this checkpoint:
+
+- Convert the ad hoc `/tmp/zingpop-auth-isolation-probe.mjs` server probe into a repeatable repo script or documented runbook.
+- Do a clean production redeploy from `de409d112251ae250dd8b8a2900011db91411494` or later, then rerun `nginx -t`, service restarts, unauthenticated probes, and authenticated probes.
+- Verify the real logged-in workbench UI opens end to end through `https://app.zingpop.cn`.
+- Verify a real model request through the production workbench.
+- Extend tenant-scope verification beyond sessions/events to file browsing, terminal/command execution, logs, model-call artifacts, and project import/creation.
+- Continue production auth/SMS, payment, legal/compliance, secrets, audit logging, backup, monitoring, and reboot-recovery work below.
 
 ## Hard Blockers
 
@@ -51,22 +77,25 @@ Operational reference:
 
 ### 4. Public Multi-User Isolation
 
-This is the largest product security blocker.
+The core authenticated workbench isolation probe passed on 2026-05-22. Treat this as closed for the tested workbench directory/session/event attack surface, but continue broader tenant-scope verification before broad paid launch.
 
 - Implementation checkpoint on 2026-05-21:
   - `packages/console/core/src/workbench.ts` defines the server-authorized mapping from `account_id` membership to `workspace_id -> project_id -> filesystem directory`.
   - Authenticated workbench directories now resolve to `$ZINGPOP_WORKSPACE_ROOT/<workspace_id>/projects/<project_id>` instead of `/srv/zingpop/workspaces/default`.
   - `packages/console/app/src/routes/auth/status.ts` emits the authorized `X-Opencode-Directory`, `X-Opencode-Workspace`, `X-Zingpop-Workspace-ID`, and `X-Zingpop-Project-ID` headers.
-  - `deploy/nginx/zingpop-app.conf` takes those headers from `auth_request` and prepends the authorized directory/workspace to proxied opencode requests before any client query string.
+  - `deploy/nginx/zingpop-app.conf` takes those headers from `auth_request` and injects the authorized directory into proxied opencode requests.
   - Session-id routes now get an additional auth subrequest check that rejects sessions whose stored directory does not match the current authorized workspace project directory.
   - The public app host filters `/global/event` through the console auth layer and blocks shared `/sync`, `/tui`, `/global/dispose`, `/global/upgrade`, and `/instance/dispose` routes.
   - Login redirects now send users to their own workspace project directory when the app auth gate redirects through `https://app.zingpop.cn/`.
+- Production verification checkpoint on 2026-05-22:
+  - Commit `de409d112251ae250dd8b8a2900011db91411494` removes Zingpop workspace ids from opencode's `workspace` query routing, rejects client-supplied `workspace`, and drops client-supplied `directory` query parameters before proxying.
+  - The live Nginx config was repaired from the committed template and verified with `nginx -t`.
+  - The authenticated isolation probe passed for `directory=/root`, shared default directory override, another user's directory override, cross-user session id access, client `workspace` injection, and `/global/event` filtering.
 - Remaining launch-gate verification:
-  - Deploy and verify the production Nginx config and console app build.
-  - Probe that client-supplied `directory=/root`, `/srv/zingpop/workspaces/default`, and another user's directory do not win over the server-authorized directory.
+  - Replace the current hot-patched server state with a clean production build/install from commit `de409d112251ae250dd8b8a2900011db91411494` or later.
+  - Preserve a repeatable production probe for future deployments.
   - Add broader end-to-end checks before reading projects, sessions, files, terminals, command execution, event streams, logs, and model-call artifacts.
   - Make every project/session/file operation tenant-scoped in production verification, not only login entry scoped.
-  - Add real cross-account denial tests against a running workbench instance.
 - Keep any opencode core change out of scope unless the user explicitly approves the exact low-level tradeoff.
 
 ### 5. Personal Information And Data Compliance
@@ -172,8 +201,9 @@ Before accepting paying users:
 - [ ] Huawei Cloud SMS production credentials and templates are verified.
 - [ ] Logged-in workbench flow works through `https://app.zingpop.cn`.
 - [ ] A real model request succeeds through the production workbench.
-- [ ] Public multi-user project/workspace isolation is implemented and tested.
-- [ ] Arbitrary server path access is blocked.
+- [x] Public workbench project/workspace isolation is implemented and tested for directory, session-id, and event-stream attack surfaces.
+- [x] Arbitrary server path access through client-supplied workbench `directory` is blocked.
+- [ ] Broader tenant-scope verification covers files, terminals, command execution, logs, model-call artifacts, and project import/creation.
 - [ ] User agreement is published.
 - [ ] Privacy policy is published.
 - [ ] Data processing notice is published.

@@ -153,4 +153,4 @@ Stage 1 workbench gate:
 5. Add forgot-password reset action/page. Done.
 6. Add rate limiting and lockout. Done.
 7. Gate app/workbench entry behind product session. Stage 1 Nginx gate added.
-8. Connect workspace/project isolation before public launch. Still required.
+8. Connect workspace/project isolation before public launch. Core authenticated workbench directory/session/event isolation passed on production on 2026-05-22; broader tenant-scope checks for files, terminals, commands, logs, model-call artifacts, and project import/create flows still remain.

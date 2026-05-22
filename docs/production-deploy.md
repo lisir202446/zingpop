@@ -244,13 +244,19 @@ OPENCODE_SERVER_USERNAME
 OPENCODE_SERVER_PASSWORD
 ```
 
-This prevents unauthenticated public access, but it is not full product account auth.
+This prevents unauthenticated public access, but product-account auth and workspace authorization are the real public entry guard.
 
-Before public multi-user launch, Zingpop still needs:
+Current authenticated workbench isolation status:
 
-- User accounts and sessions.
-- Per-user project ownership.
-- Authorization checks before opening projects, sessions, files, terminals, and commands.
+- User accounts and sessions exist for the phone/password product auth flow.
+- Per-user workbench directories map to `/srv/zingpop/workspaces/<workspace_id>/projects/<project_id>`.
+- The 2026-05-22 production probe passed for arbitrary `directory` override, shared default directory override, cross-user directory override, cross-user session ids, client `workspace` query injection, and `/global/event` filtering.
+
+Before broad public paid launch, Zingpop still needs:
+
+- A clean redeploy from commit `de409d112251ae250dd8b8a2900011db91411494` or later, replacing the current hot-patched server state.
+- A repeatable production isolation probe script or runbook.
+- Authorization checks verified before opening projects, files, terminals, commands, logs, and model-call artifacts.
 - A product-level project creation/import flow.
 
 ## Payment And Billing
@@ -299,10 +305,10 @@ The systemd service runs as a dedicated Linux user:
 zingpop
 ```
 
-Default project working directory:
+Authenticated workbench project working directory:
 
 ```text
-/srv/zingpop/workspaces/default
+/srv/zingpop/workspaces/<workspace_id>/projects/<project_id>
 ```
 
 Data and config:
@@ -312,7 +318,7 @@ Data and config:
 /srv/zingpop/config
 ```
 
-This is acceptable for a protected single-tenant staging service. It is not enough for public multi-user isolation because the existing opencode server accepts a project `directory` parameter. Public multi-user isolation should be implemented as a Zingpop layer or with explicit approval for a narrow opencode-core guard.
+The old shared default directory `/srv/zingpop/workspaces/default` is no longer proof of the public workbench path. The 2026-05-22 authenticated probe confirmed that a client-supplied `directory` parameter cannot force `/root`, the shared default directory, or another user's directory. Continue broader tenant-scope verification for files, terminals, commands, logs, model-call artifacts, and project import/create flows.
 
 ## ICP Hold
 
@@ -336,7 +342,7 @@ http://121.36.58.22:4096
 - Verify Huawei Cloud Marketplace SMS AppCode, approved `【】` signature template, and environment variables before relying on SMS login.
 - Before production, expose only `80` and `443`; restrict SSH `22` to the user's fixed IP and close public access to `3000`, `3001`, and `4096`.
 - Prepare user agreement, privacy policy, data processing notes, third-party open-source notices, and dependency license audit during the ICP waiting period.
-- Continue multi-user isolation design before public launch:
-  - Define each user's project directory.
-  - Define access checks for project, session, and file.
-  - Prevent users from entering raw server paths such as `/root/zingpop`.
+- Continue broader tenant-scope checks before public launch:
+  - Verify project, file, terminal, command, log, and model-call paths use the authenticated workspace directory.
+  - Preserve the authenticated isolation probe as a repeatable deployment check.
+  - Prevent regressions that let users enter raw server paths such as `/root/zingpop`.

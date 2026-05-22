@@ -220,15 +220,26 @@ Third-party open-source notices
 Dependency license audit
 ```
 
-### 8. Multi-User Isolation Design
+### 8. Multi-User Isolation Status
 
-This is the largest public-launch risk. Before public multi-user use, define:
+Core authenticated workbench isolation passed on the production host on 2026-05-22.
 
 ```text
-Where each user's project directory lives
-Who can access each project/session/file
-How to prevent users from entering raw server paths such as /root/zingpop
+account_id -> workspace_id -> project_id -> /srv/zingpop/workspaces/<workspace_id>/projects/<project_id>
 ```
+
+Verified live:
+
+- `?directory=/root`, the shared default directory, and another user's directory were forced back to the authenticated user's workspace project directory.
+- `?workspace=...` was rejected by Nginx with `403`.
+- Cross-user session ids were rejected.
+- `/global/event` did not leak another user's event, directory, or workspace metadata.
+
+Remaining before broad public paid use:
+
+- Clean redeploy from commit `de409d112251ae250dd8b8a2900011db91411494` or later so the server is not relying on hot patches.
+- Add a repeatable production probe script or runbook.
+- Extend tenant-scope verification to file browsing, terminals, command execution, logs, model-call artifacts, and project import/creation.
 
 ## Remaining Work
 
@@ -351,13 +362,13 @@ docs/production-deploy.md
 
 ### 7. Project Storage Model
 
-Current testing opens a server path:
+Authenticated workbench projects now resolve under:
 
 ```text
-/root/zingpop
+/srv/zingpop/workspaces/<workspace_id>/projects/<project_id>
 ```
 
-Production must define how user projects are created and stored:
+Production still needs to finish how user projects are created and imported:
 
 - Upload project.
 - Clone from Git.
@@ -365,13 +376,7 @@ Production must define how user projects are created and stored:
 - Restrict each user to their own directories.
 - Avoid exposing `/root` or shared server paths to normal users.
 
-Current staging guardrail:
-
-```text
-/srv/zingpop/workspaces/default
-```
-
-This is a single-tenant staging guardrail, not final public multi-user isolation.
+The previous shared staging guardrail `/srv/zingpop/workspaces/default` must not be used as a public multi-user workspace. The 2026-05-22 live probe confirmed that attempts to force this shared directory are mapped back to the authenticated user's own workspace directory.
 
 ### 8. Commercial License Review
 
@@ -441,7 +446,8 @@ Before paid launch:
 - [x] Phone + password login is implemented.
 - [x] Forgot-password SMS reset is implemented.
 - [x] Workbench Nginx template checks product login before proxying to opencode.
-- [ ] Public multi-user project isolation is implemented.
+- [x] Public workbench directory/session/event isolation is implemented and verified on production.
+- [ ] Broader tenant-scope verification covers files, terminals, command execution, logs, model-call artifacts, and project import/creation.
 - [x] Workbench service can use the opencode production build instead of Vite dev.
 - [x] Workbench backend has a systemd service template.
 - [ ] Server reboot restores all services automatically.
