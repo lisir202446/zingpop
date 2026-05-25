@@ -185,10 +185,11 @@ export namespace PhoneAuth {
       const useDevelopmentFallback = SMS.allowDevelopmentFallback({
         stage: Resource.App.stage,
       })
+      const loginCodeID = Identifier.create("login")
 
       await Database.use((tx) =>
         tx.insert(LoginCodeTable).values({
-          id: Identifier.create("login"),
+          id: loginCodeID,
           phone,
           codeHash: hashLoginCode(phone, code),
           expiresAt: new Date(now.getTime() + LOGIN_CODE_TTL_MS),
@@ -201,6 +202,19 @@ export namespace PhoneAuth {
       try {
         await SMS.sendLoginCode({ phone, code })
       } catch (error) {
+        await Database.use((tx) =>
+          tx
+            .update(LoginCodeTable)
+            .set({
+              timeDeleted: new Date(),
+            })
+            .where(eq(LoginCodeTable.id, loginCodeID)),
+        ).catch((cleanupError) => {
+          console.error("Failed to cleanup unsent phone verification code", {
+            phone: Phone.mask(phone),
+            error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+          })
+        })
         console.error("Failed to send phone verification code", {
           phone: Phone.mask(phone),
           error: error instanceof Error ? error.message : String(error),
