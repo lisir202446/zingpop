@@ -45,6 +45,7 @@ describe("nginx workbench isolation", () => {
     expect(block).toContain("auth_request /_zingpop_auth;")
     expect(block).toContain("auth_request_set $zingpop_directory $upstream_http_x_opencode_directory;")
     expect(block).toContain("proxy_pass http://127.0.0.1:4096$uri?directory=$zingpop_directory&$zingpop_client_args;")
+    expect(block).toContain("include /etc/nginx/snippets/zingpop-opencode-basic-auth.conf;")
     expect(block).toContain('if ($arg_workspace != "")')
     expect(block).toContain("return 403;")
   })
