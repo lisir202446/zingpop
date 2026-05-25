@@ -54,6 +54,32 @@ Next work from this checkpoint:
 - Extend tenant-scope verification beyond sessions/events to file browsing, terminal/command execution, logs, model-call artifacts, and project import/creation.
 - Continue production auth/SMS, payment, legal/compliance, secrets, audit logging, backup, monitoring, and reboot-recovery work below.
 
+### 2026-05-25: Session Status Reload Fix And Production Probe Passed
+
+The production baseline was advanced after fixing the workbench reload path that returned `text/html` or `401 Unauthorized` for `/session/status`.
+
+Current online baseline requirements:
+
+- Console/auth fix commit `c77faff0dc80d6163c144ad6b94b50c461268034` is included. This prevents `/session/status` from being interpreted as a session id named `status` during the `auth_request` ownership check.
+- Nginx fix commit `19325e5f3e4ffe8e130fc48b1954f71ab1e017b9` is included. This makes the exact `/session/status` proxy pass the same opencode Basic Auth snippet as the normal workbench proxy.
+- The active production Nginx config has exactly one `include /etc/nginx/snippets/zingpop-opencode-basic-auth.conf;` in the root workbench proxy block and one in the `/session/status` proxy block.
+- The console output was rebuilt and installed on the Huawei Cloud server, Nginx was reloaded with the fixed app config, and `nginx -t` passed.
+- `bun scripts/production-isolation-probe.mjs --mode all` passed on production with final result `ALL PRODUCTION ISOLATION PROBES PASSED`.
+
+The repeatable production probe now covers:
+
+- Unauthenticated `/session/status` redirects to phone login instead of returning raw backend output.
+- Authenticated `/session/status?directory=/root` returns HTTP `200` JSON and does not return `text/html`.
+- Client-supplied `directory` and `workspace` attacks remain blocked or forced back to the authorized workspace project directory.
+- Cross-user session reads remain blocked.
+- `/global/event` remains filtered to the authenticated workspace.
+
+Deployment rule from this checkpoint:
+
+- Do not deploy a source archive, console build, or `deploy/nginx/zingpop-app.conf` older than commit `19325e5f3e4ffe8e130fc48b1954f71ab1e017b9`.
+- Run `bun scripts/production-isolation-probe.mjs --mode all` after every future production deployment.
+- If the probe fails, treat the deployment as not commercially usable until the regression is fixed or rolled back.
+
 ## Hard Blockers
 
 ### 1. Business Qualification
@@ -104,6 +130,11 @@ The core authenticated workbench isolation probe passed on 2026-05-22. Treat thi
   - The authenticated isolation probe passed for `directory=/root`, shared default directory override, another user's directory override, cross-user session id access, client `workspace` injection, and `/global/event` filtering.
   - Commit `105ea9c7974628af28dabd027ba28a01a8c3c37e` adds the repeatable `scripts/production-isolation-probe.mjs` deployment check and was cleanly deployed to production.
   - The clean production redeploy passed `nginx -t`, service restart checks, and `bun scripts/production-isolation-probe.mjs --mode all` with `ALL PRODUCTION ISOLATION PROBES PASSED`.
+- Production verification checkpoint on 2026-05-25:
+  - Commit `c77faff0dc80d6163c144ad6b94b50c461268034` fixes the console auth gate so `/session/status` is treated as a collection/status route, not a cross-user session id lookup.
+  - Commit `19325e5f3e4ffe8e130fc48b1954f71ab1e017b9` fixes the `/session/status` Nginx proxy to forward opencode Basic Auth like the normal workbench proxy.
+  - The active production config was verified with `nginx -t` and `bun scripts/production-isolation-probe.mjs --mode all`.
+  - The final live result was `ALL PRODUCTION ISOLATION PROBES PASSED`, including authenticated `/session/status?directory=/root` returning HTTP `200` JSON rather than `text/html` or `401`.
 - Remaining launch-gate verification:
   - Run `bun scripts/production-isolation-probe.mjs --mode all` after every future deployment.
   - Add broader end-to-end checks before reading projects, sessions, files, terminals, command execution, event streams, logs, and model-call artifacts.
