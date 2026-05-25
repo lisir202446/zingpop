@@ -69,6 +69,7 @@ import {
   effectiveWorkspaceOrder,
   errorMessage,
   latestRootSession,
+  routeDirectoryNeedsProjectOpen,
   sortedRootSessions,
   workspaceKey,
 } from "./layout/helpers"
@@ -1253,6 +1254,14 @@ export default function Layout(props: ParentProps) {
     const meta = globalSync.data.project.find((item) => item.id === id)
     return meta?.worktree ?? directory
   }
+
+  createEffect(() => {
+    if (!pageReady()) return
+    if (!layoutReady()) return
+    const directory = currentDir()
+    if (!routeDirectoryNeedsProjectOpen(directory, layout.projects.list())) return
+    layout.projects.open(projectRoot(directory))
+  })
 
   function activeProjectRoot(directory: string) {
     return currentProject()?.worktree ?? projectRoot(directory)

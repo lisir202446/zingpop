@@ -62,6 +62,18 @@ export const childSessionOnPath = (sessions: Session[] | undefined, rootID: stri
 export const displayName = (project: { name?: string; worktree: string }) =>
   project.name || getFilename(project.worktree)
 
+export const routeDirectoryNeedsProjectOpen = (
+  directory: string,
+  projects: Array<{ worktree: string; sandboxes?: string[] }>,
+) => {
+  if (!directory) return false
+  const key = workspaceKey(directory)
+  return !projects.some(
+    (project) =>
+      workspaceKey(project.worktree) === key || project.sandboxes?.some((sandbox) => workspaceKey(sandbox) === key),
+  )
+}
+
 export const errorMessage = (err: unknown, fallback: string) => {
   if (err && typeof err === "object" && "data" in err) {
     const data = (err as { data?: { message?: string } }).data

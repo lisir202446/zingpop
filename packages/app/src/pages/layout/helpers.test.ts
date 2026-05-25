@@ -14,6 +14,7 @@ import {
   errorMessage,
   hasProjectPermissions,
   latestRootSession,
+  routeDirectoryNeedsProjectOpen,
   workspaceKey,
 } from "./helpers"
 
@@ -119,6 +120,16 @@ describe("layout workspace helpers", () => {
   test("keeps local first while preserving known order", () => {
     const result = effectiveWorkspaceOrder("/root", ["/root", "/b", "/c"], ["/root", "/c", "/a", "/b"])
     expect(result).toEqual(["/root", "/c", "/b"])
+  })
+
+  test("opens direct route directory when no project is registered locally", () => {
+    expect(routeDirectoryNeedsProjectOpen("/workspace/default", [])).toBe(true)
+    expect(routeDirectoryNeedsProjectOpen("/workspace/default", [{ worktree: "/workspace/default" }])).toBe(false)
+    expect(
+      routeDirectoryNeedsProjectOpen("/workspace/sandbox", [
+        { worktree: "/workspace/default", sandboxes: ["/workspace/sandbox"] },
+      ]),
+    ).toBe(false)
   })
 
   test("finds the latest root session across workspaces", () => {
