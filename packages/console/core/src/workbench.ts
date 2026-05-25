@@ -90,6 +90,7 @@ export namespace Workbench {
   export function sessionIDFromOriginalURI(value: string | undefined) {
     const parts = originalPath(value)?.split("/").filter(Boolean)
     if (!parts || parts[0] !== "session") return
+    if (parts[1] === "status") return
     return parts[1]
   }
 

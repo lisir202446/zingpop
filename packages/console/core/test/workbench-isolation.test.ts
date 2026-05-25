@@ -55,6 +55,12 @@ describe("workbench isolation", () => {
     expect(Workbench.sessionIDFromOriginalURI("/event")).toBeUndefined()
   })
 
+  test("does not treat session collection routes as session ids", () => {
+    expect(Workbench.sessionIDFromOriginalURI("/session")).toBeUndefined()
+    expect(Workbench.sessionIDFromOriginalURI("/session/status")).toBeUndefined()
+    expect(Workbench.sessionIDFromOriginalURI("/session/status?directory=/root")).toBeUndefined()
+  })
+
   test("does not send zingpop workspace ids to opencode workspace routing", () => {
     const url = Workbench.opencodeURL({
       pathname: "/session/ses_123",
