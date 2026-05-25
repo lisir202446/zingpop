@@ -134,6 +134,10 @@ async function runUnauthenticatedProbes() {
   const workspaceOverride = await fetchText("app /?workspace=wrk_fake", appURL("/", { workspace: "wrk_fake" }))
   check(workspaceOverride.response.status === 403, "unauth workspace query injection is blocked", `HTTP ${workspaceOverride.response.status}`)
 
+  const sessionStatus = await fetchText("app /session/status", appURL("/session/status"))
+  check(sessionStatus.response.status === 302, "unauth session status redirects to login", `HTTP ${sessionStatus.response.status}`)
+  check(sessionStatus.location?.includes("/auth/phone"), "session status login redirect points to phone auth", sessionStatus.location ?? "")
+
   for (const target of [
     "/site.webmanifest",
     "/favicon-v3.ico",
@@ -413,6 +417,13 @@ async function runAuthenticatedProbes() {
     check(Array.isArray(listRoot.json), "A list override returns an array", listRoot.text)
     check(listRoot.json?.some?.((item) => item.id === rootSession?.id), "A list override still sees own created session")
     check(listRoot.json?.every?.((item) => item.directory === a.access.directory), "A list override only returns own directory")
+
+    const statusRoot = await fetchJSON("A session/status with directory=/root override", appURL("/session/status", { directory: "/root" }), {
+      headers: { Cookie: a.cookie },
+    })
+    check(statusRoot.response.status === 200, "A session/status override returns 200", statusRoot.text)
+    check(statusRoot.response.headers.get("content-type")?.includes("application/json"), "A session/status returns JSON", statusRoot.response.headers.get("content-type") ?? "")
+    check(!statusRoot.text.includes("<html"), "A session/status does not return HTML", statusRoot.text.slice(0, 200))
 
     const clientWorkspace = await fetchText("A client workspace query attack", appURL("/", { workspace: "wrk_fake" }), {
       headers: { Cookie: a.cookie },
