@@ -14,6 +14,11 @@ export const LOGIN_CODE_TTL_MS = 3 * 60 * 1000
 export const LOGIN_CODE_RESEND_MS = 60 * 1000
 export const LOGIN_CODE_ATTEMPT_LIMIT = 5
 export const LOGIN_CODE_DAILY_LIMIT = 50
+const SEND_CODE_PUBLIC_ERRORS = [
+  "Invalid phone number",
+  "Please wait before requesting another verification code",
+  "Daily verification code limit reached",
+] as const
 
 export function hashLoginCode(phone: string, code: string) {
   return createHmac("sha256", Resource.ZEN_SESSION_SECRET.value).update(`${phone}:${code}`).digest("hex")
@@ -42,6 +47,95 @@ export function assertCodeUsable(input: {
   if (input.usedAt) throw new Error("Verification code has expired")
   if (input.expiresAt.getTime() <= input.now.getTime()) throw new Error("Verification code has expired")
   if (input.attemptCount >= LOGIN_CODE_ATTEMPT_LIMIT) throw new Error("Too many invalid verification attempts")
+}
+
+export function publicSendCodeFailureMessage(error: Error) {
+  if (SEND_CODE_PUBLIC_ERRORS.includes(error.message as (typeof SEND_CODE_PUBLIC_ERRORS)[number])) return error.message
+  return "Failed to send verification code"
+}
+
+async function consumeLoginCode(input: { tx: Database.TxOrDb; phone: string; code: string }) {
+  const latestCode = await input.tx
+    .select()
+    .from(LoginCodeTable)
+    .where(and(eq(LoginCodeTable.phone, input.phone), isNull(LoginCodeTable.timeDeleted)))
+    .orderBy(desc(LoginCodeTable.timeCreated))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!latestCode) throw new Error("Verification code has expired")
+
+  const now = new Date()
+  assertCodeUsable({
+    usedAt: latestCode.usedAt,
+    expiresAt: latestCode.expiresAt,
+    attemptCount: latestCode.attemptCount,
+    now,
+  })
+
+  if (latestCode.codeHash !== hashLoginCode(input.phone, input.code)) {
+    await input.tx
+      .update(LoginCodeTable)
+      .set({
+        attemptCount: latestCode.attemptCount + 1,
+      })
+      .where(eq(LoginCodeTable.id, latestCode.id))
+    throw new Error("Invalid verification code")
+  }
+
+  await input.tx
+    .update(LoginCodeTable)
+    .set({
+      usedAt: now,
+    })
+    .where(eq(LoginCodeTable.id, latestCode.id))
+}
+
+async function phoneAccount(input: { tx: Database.TxOrDb; phone: string }) {
+  return input.tx
+    .select({
+      accountID: AuthTable.accountID,
+    })
+    .from(AuthTable)
+    .where(and(eq(AuthTable.provider, "phone"), eq(AuthTable.subject, input.phone), isNull(AuthTable.timeDeleted)))
+    .limit(1)
+    .then((rows) => rows[0]?.accountID)
+}
+
+async function createPhoneAccount(input: { tx: Database.TxOrDb; phone: string }) {
+  const accountID = Identifier.create("account")
+
+  await input.tx.insert(AccountTable).values({
+    id: accountID,
+  })
+
+  await input.tx.insert(AuthTable).values({
+    id: Identifier.create("auth"),
+    provider: "phone",
+    subject: input.phone,
+    accountID,
+  })
+
+  return accountID
+}
+
+async function verifyCodeForAccount(input: { phone: string; code: string; createAccount: boolean }) {
+  const phone = Phone.normalize(input.phone)
+  const code = input.code.trim()
+
+  if (!code) throw new Error("Verification code is required")
+
+  return Database.transaction(async (tx) => {
+    await consumeLoginCode({ tx, phone, code })
+
+    const accountID = (await phoneAccount({ tx, phone })) ?? (input.createAccount ? await createPhoneAccount({ tx, phone }) : undefined)
+    if (!accountID) throw new Error("Unable to reset password")
+
+    return {
+      accountID,
+      phone,
+    }
+  })
 }
 
 export namespace PhoneAuth {
@@ -104,7 +198,15 @@ export namespace PhoneAuth {
 
       if (useDevelopmentFallback) return { phone, devCode: code }
 
-      await SMS.sendLoginCode({ phone, code })
+      try {
+        await SMS.sendLoginCode({ phone, code })
+      } catch (error) {
+        console.error("Failed to send phone verification code", {
+          phone: Phone.mask(phone),
+          error: error instanceof Error ? error.message : String(error),
+        })
+        throw new Error(publicSendCodeFailureMessage(error instanceof Error ? error : new Error(String(error))))
+      }
 
       return { phone }
     },
@@ -115,82 +217,14 @@ export namespace PhoneAuth {
       phone: z.string(),
       code: z.string(),
     }),
-    async (input) => {
-      const phone = Phone.normalize(input.phone)
-      const code = input.code.trim()
+    (input) => verifyCodeForAccount({ ...input, createAccount: true }),
+  )
 
-      if (!code) throw new Error("Verification code is required")
-
-      return Database.transaction(async (tx) => {
-        const now = new Date()
-        const latestCode = await tx
-          .select()
-          .from(LoginCodeTable)
-          .where(and(eq(LoginCodeTable.phone, phone), isNull(LoginCodeTable.timeDeleted)))
-          .orderBy(desc(LoginCodeTable.timeCreated))
-          .limit(1)
-          .then((rows) => rows[0])
-
-        if (!latestCode) throw new Error("Verification code has expired")
-
-        assertCodeUsable({
-          usedAt: latestCode.usedAt,
-          expiresAt: latestCode.expiresAt,
-          attemptCount: latestCode.attemptCount,
-          now,
-        })
-
-        if (latestCode.codeHash !== hashLoginCode(phone, code)) {
-          await tx
-            .update(LoginCodeTable)
-            .set({
-              attemptCount: latestCode.attemptCount + 1,
-            })
-            .where(eq(LoginCodeTable.id, latestCode.id))
-          throw new Error("Invalid verification code")
-        }
-
-        await tx
-          .update(LoginCodeTable)
-          .set({
-            usedAt: now,
-          })
-          .where(eq(LoginCodeTable.id, latestCode.id))
-
-        const existingAuth = await tx
-          .select({
-            accountID: AuthTable.accountID,
-          })
-          .from(AuthTable)
-          .where(and(eq(AuthTable.provider, "phone"), eq(AuthTable.subject, phone)))
-          .limit(1)
-          .then((rows) => rows[0])
-
-        if (existingAuth) {
-          return {
-            accountID: existingAuth.accountID,
-            phone,
-          }
-        }
-
-        const accountID = Identifier.create("account")
-
-        await tx.insert(AccountTable).values({
-          id: accountID,
-        })
-
-        await tx.insert(AuthTable).values({
-          id: Identifier.create("auth"),
-          provider: "phone",
-          subject: phone,
-          accountID,
-        })
-
-        return {
-          accountID,
-          phone,
-        }
-      })
-    },
+  export const verifyExistingCode = fn(
+    z.object({
+      phone: z.string(),
+      code: z.string(),
+    }),
+    (input) => verifyCodeForAccount({ ...input, createAccount: false }),
   )
 }

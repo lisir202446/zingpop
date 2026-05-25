@@ -90,6 +90,7 @@ const map = {
   "Authentication service is not ready": "error.authServiceUnavailable",
   "Verification code is required": "error.codeRequired",
   "Invalid verification code": "error.codeInvalid",
+  "Unable to reset password": "error.codeInvalid",
   "Verification code has expired": "error.codeExpired",
   "Please wait before requesting another verification code": "error.codeRateLimited",
   "Daily verification code limit reached": "error.codeDailyLimit",

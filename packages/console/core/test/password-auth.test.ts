@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
+  PASSWORD_LOGIN_FAILURE_MESSAGE,
+  PASSWORD_RESET_FAILURE_MESSAGE,
   PASSWORD_ATTEMPT_LIMIT,
   assertPasswordAllowed,
   createPasswordHash,
@@ -26,5 +28,13 @@ describe("phone password auth", () => {
 
   test("tracks a finite password attempt limit", () => {
     expect(PASSWORD_ATTEMPT_LIMIT).toBe(5)
+  })
+
+  test("uses one public login failure message for bad phone, bad password, and lockout", () => {
+    expect(PASSWORD_LOGIN_FAILURE_MESSAGE).toBe("Invalid phone number or password")
+  })
+
+  test("uses a generic public reset failure message", () => {
+    expect(PASSWORD_RESET_FAILURE_MESSAGE).toBe("Unable to reset password")
   })
 })

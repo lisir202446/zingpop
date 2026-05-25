@@ -16,6 +16,8 @@ export const PASSWORD_MIN_LENGTH = 8
 export const PASSWORD_MAX_LENGTH = 128
 export const PASSWORD_ATTEMPT_LIMIT = 5
 export const PASSWORD_LOCK_MS = 15 * 60 * 1000
+export const PASSWORD_LOGIN_FAILURE_MESSAGE = "Invalid phone number or password"
+export const PASSWORD_RESET_FAILURE_MESSAGE = "Unable to reset password"
 
 export function assertPasswordAllowed(password: string) {
   if (!password) throw new Error("Password is required")
@@ -126,17 +128,17 @@ export namespace PhonePasswordAuth {
     async (input) => {
       const phone = Phone.normalize(input.phone)
       const accountID = await accountForPhone(phone)
-      if (!accountID) throw new Error("Invalid phone number or password")
+      if (!accountID) throw new Error(PASSWORD_LOGIN_FAILURE_MESSAGE)
 
       const password = await passwordForAccount(accountID)
-      if (!password) throw new Error("Invalid phone number or password")
+      if (!password) throw new Error(PASSWORD_LOGIN_FAILURE_MESSAGE)
       if (password.lockedUntil && password.lockedUntil.getTime() > Date.now()) {
-        throw new Error("Too many password attempts. Please try again later")
+        throw new Error(PASSWORD_LOGIN_FAILURE_MESSAGE)
       }
 
       if (!(await verifyPasswordHash(input.password, password.passwordHash))) {
         await recordFailedAttempt({ accountID, failedAttemptCount: password.failedAttemptCount })
-        throw new Error("Invalid phone number or password")
+        throw new Error(PASSWORD_LOGIN_FAILURE_MESSAGE)
       }
 
       await Database.use((tx) =>
@@ -161,7 +163,10 @@ export namespace PhonePasswordAuth {
     }),
     async (input) => {
       assertPasswordAllowed(input.password)
-      const result = await PhoneAuth.verifyCode({ phone: input.phone, code: input.code })
+      const result = await PhoneAuth.verifyExistingCode({ phone: input.phone, code: input.code }).catch((error: Error) => {
+        if (error.message === "Unable to reset password") throw new Error(PASSWORD_RESET_FAILURE_MESSAGE)
+        throw error
+      })
       await setPassword({ accountID: result.accountID, password: input.password })
       return result
     },

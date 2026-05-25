@@ -4,6 +4,7 @@ import {
   LOGIN_CODE_TTL_MS,
   assertCanSendCode,
   assertCodeUsable,
+  publicSendCodeFailureMessage,
 } from "../src/phone-auth"
 import { AuthProvider } from "../src/schema/auth.sql"
 import { Phone } from "../src/phone"
@@ -58,6 +59,18 @@ describe("phone login", () => {
         now: new Date("2026-04-23T10:06:00.000Z"),
       }),
     ).toThrow("Too many invalid verification attempts")
+  })
+
+  test("does not expose provider errors when sms sending fails", () => {
+    expect(publicSendCodeFailureMessage(new Error("Huawei APIG raw provider failure"))).toBe(
+      "Failed to send verification code",
+    )
+  })
+
+  test("keeps safe verification-code rate limit errors user visible", () => {
+    expect(publicSendCodeFailureMessage(new Error("Please wait before requesting another verification code"))).toBe(
+      "Please wait before requesting another verification code",
+    )
   })
 
   test("allows a development fallback when sms is not configured", () => {
