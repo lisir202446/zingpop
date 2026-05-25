@@ -80,6 +80,29 @@ Deployment rule from this checkpoint:
 - Run `bun scripts/production-isolation-probe.mjs --mode all` after every future production deployment.
 - If the probe fails, treat the deployment as not commercially usable until the regression is fixed or rolled back.
 
+### 2026-05-25: Production Auth/SMS Configuration Probe Passed
+
+The production console was rebuilt and installed from commit `f412214f84420b71d9b14696c17101e8570496c0`, hardening phone auth and SMS handling.
+
+Implemented source changes:
+
+- Password reset now verifies an existing phone account and no longer creates a new account through the reset path.
+- Password login returns one public failure message for nonexistent phone numbers, wrong passwords, missing password rows, and lockout.
+- SMS provider failures are logged server-side and exposed to users as a generic verification-code send failure.
+- `scripts/production-auth-sms-probe.mjs` was added as a repeatable production auth/SMS configuration check.
+
+Production verification:
+
+- `bun scripts/production-auth-sms-probe.mjs` passed with final result `ALL PRODUCTION AUTH/SMS CONFIG PROBES PASSED`.
+- `bun scripts/production-isolation-probe.mjs --mode all` passed with final result `ALL PRODUCTION ISOLATION PROBES PASSED`.
+- The live environment uses the Huawei Cloud Marketplace/APIG SMS interface (`SMS_PROVIDER=huawei_apig`), and verification-code registration is working in production.
+
+Remaining manual auth-flow confirmation before marking the whole auth/SMS loop closed:
+
+- Phone-password login with a registered phone number.
+- Forgot-password reset through SMS code and a new password.
+- Same public login failure copy for unregistered phone plus random password and registered phone plus wrong password.
+
 ## Hard Blockers
 
 ### 1. Business Qualification
@@ -238,10 +261,10 @@ Before accepting paying users:
 
 - [ ] Paid SaaS qualification reviewed; ICP filing/license requirements confirmed.
 - [ ] ICP filing number is displayed in the website footer with the required MIIT link.
-- [ ] Phone registration works on production.
+- [x] Phone registration works on production.
 - [ ] Phone-password login works on production.
 - [ ] Forgot-password reset works on production.
-- [ ] Huawei Cloud SMS production credentials and templates are verified.
+- [x] Huawei Cloud Marketplace/APIG SMS production credentials and templates are verified.
 - [ ] Logged-in workbench flow works through `https://app.zingpop.cn`.
 - [ ] A real model request succeeds through the production workbench.
 - [x] Public workbench project/workspace isolation is implemented and tested for directory, session-id, and event-stream attack surfaces.
