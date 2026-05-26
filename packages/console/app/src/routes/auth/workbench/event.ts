@@ -2,20 +2,20 @@ import { APIEvent } from "@solidjs/start"
 import { Workbench } from "@opencode-ai/console-core/workbench.js"
 import { useAuthSession } from "~/context/auth"
 
-async function currentAccess() {
+async function currentAccess(originalURI?: string) {
   const session = await useAuthSession()
   const current = session.data.current ? session.data.account?.[session.data.current] : undefined
   const fallback = Object.values(session.data.account ?? {})[0]
   const account = current ?? fallback
   if (!account) return
-  const access = await Workbench.resolveAccess({ accountID: account.id })
+  const access = await Workbench.resolveAccess({ accountID: account.id, originalURI })
   if (!access) return
   await Workbench.ensureDirectory(access)
   return access
 }
 
-export async function GET(_input: APIEvent) {
-  const access = await currentAccess()
+export async function GET(input: APIEvent) {
+  const access = await currentAccess(input.request.headers.get("x-original-uri") ?? input.request.url)
   if (!access) return Response.json({ authenticated: false }, { status: 401 })
 
   const upstream = await fetch(Workbench.opencodeURL({ pathname: "/global/event", access }), {
