@@ -12,7 +12,7 @@ export const WorkbenchProjectTable = mysqlTable(
     name: varchar("name", { length: 255 }).notNull(),
     source_type: mysqlEnum("source_type", WorkbenchProjectSourceType).notNull(),
     source_label: varchar("source_label", { length: 2048 }).notNull(),
-    directory: varchar("directory", { length: 2048 }).notNull(),
+    directory: varchar("directory", { length: 512 }).notNull(),
     sync_mode: mysqlEnum("sync_mode", WorkbenchProjectSyncMode).notNull().default("manual"),
     ...timestamps,
   },
