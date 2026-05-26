@@ -35,7 +35,10 @@ describe("nginx workbench isolation", () => {
   test("filters event streams and blocks shared management routes on the public app host", () => {
     expect(config).toContain("location = /global/event")
     expect(config).toContain("proxy_pass http://127.0.0.1:3000/auth/workbench/event;")
+    expect(config).toContain("location ^~ /_zingpop/")
+    expect(config).toContain("proxy_pass http://127.0.0.1:3000/zingpop/")
     expect(config).toContain("location ~ ^/(sync|tui)(/|$)")
+    expect(config).toContain("location ~ ^/experimental/workspace(/|$)")
     expect(config).toContain("location ~ ^/(global/(dispose|upgrade)|instance/dispose)$")
   })
 

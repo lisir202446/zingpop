@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises"
 import { posix as path } from "node:path"
 import { Database, and, eq, isNull } from "./drizzle/index"
 import { UserTable } from "./schema/user.sql"
+import { WorkbenchProject } from "./workbench-project"
 
 export namespace Workbench {
   export type Access = {
@@ -43,7 +44,27 @@ export namespace Workbench {
     return result
   }
 
-  export async function resolveAccess(input: { accountID: string; env?: Record<string, string | undefined> }) {
+  export async function resolveAccess(input: {
+    accountID: string
+    originalURI?: string
+    env?: Record<string, string | undefined>
+  }) {
+    const project = await WorkbenchProject.resolveForAccount({
+      accountID: input.accountID,
+      defaultProjectID: projectID(input.env),
+      originalURI: input.originalURI,
+      env: input.env,
+    })
+    if (project === null) return
+    if (project) {
+      return {
+        accountID: input.accountID,
+        workspaceID: project.workspace_id,
+        projectID: project.id,
+        directory: project.directory,
+      }
+    }
+
     const user = await Database.use((tx) =>
       tx
         .select({
@@ -56,12 +77,12 @@ export namespace Workbench {
     )
     if (!user) return
 
-    const project = projectID(input.env)
+    const fallbackProject = projectID(input.env)
     return {
       accountID: input.accountID,
       workspaceID: user.workspaceID,
-      projectID: project,
-      directory: directory({ workspaceID: user.workspaceID, projectID: project, env: input.env }),
+      projectID: fallbackProject,
+      directory: directory({ workspaceID: user.workspaceID, projectID: fallbackProject, env: input.env }),
     }
   }
 
@@ -98,6 +119,7 @@ export namespace Workbench {
     const pathname = originalPath(input.originalURI)
     if (!pathname) return true
     if (pathname === "/global/dispose" || pathname === "/global/upgrade" || pathname === "/instance/dispose") return false
+    if (pathname === "/experimental/workspace" || pathname.startsWith("/experimental/workspace/")) return false
     if (pathname === "/sync" || pathname.startsWith("/sync/")) return false
     if (pathname === "/tui" || pathname.startsWith("/tui/")) return false
     if (pathname === "/global/config" && input.method && input.method.toUpperCase() !== "GET") return false

@@ -12,6 +12,7 @@ export namespace Identifier {
     lite: "lit",
     model: "mod",
     payment: "pay",
+    project: "prj",
     provider: "prv",
     subscription: "sub",
     usage: "usg",

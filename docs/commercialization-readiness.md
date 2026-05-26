@@ -269,6 +269,8 @@ Before accepting paying users:
 - [ ] A real model request succeeds through the production workbench.
 - [x] Public workbench project/workspace isolation is implemented and tested for directory, session-id, and event-stream attack surfaces.
 - [x] Arbitrary server path access through client-supplied workbench `directory` is blocked.
+- [x] Zingpop project table, cloud directory isolation, auth-gated project resolution, `/_zingpop/` API, and hosted local-folder picker are implemented.
+- [ ] Production browser QA remains: Chrome/Edge native folder picker, upload, cloud edit, sync back, conflict handling, and two-account isolation probe.
 - [ ] Broader tenant-scope verification covers files, terminals, command execution, logs, model-call artifacts, and project import/creation.
 - [ ] User agreement is published.
 - [ ] Privacy policy is published.

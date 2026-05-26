@@ -84,6 +84,8 @@ describe("workbench isolation", () => {
     expect(Workbench.routeAllowed({ originalURI: "/global/dispose", method: "POST" })).toBe(false)
     expect(Workbench.routeAllowed({ originalURI: "/sync/history", method: "POST" })).toBe(false)
     expect(Workbench.routeAllowed({ originalURI: "/tui/select-session", method: "POST" })).toBe(false)
+    expect(Workbench.routeAllowed({ originalURI: "/experimental/workspace", method: "GET" })).toBe(false)
+    expect(Workbench.routeAllowed({ originalURI: "/experimental/workspace/abc", method: "POST" })).toBe(false)
   })
 
   test("matches session ownership against the authorized directory", () => {

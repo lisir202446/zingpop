@@ -579,11 +579,12 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
       },
       projects: {
         list,
-        open(directory: string) {
+        open(input: string | { worktree: string; id?: string; name?: string }) {
+          const directory = typeof input === "string" ? input : input.worktree
           const root = rootFor(directory)
           if (server.projects.list().find((x) => x.worktree === root)) return
           void globalSync.project.loadSessions(root)
-          server.projects.open(root)
+          server.projects.open(typeof input === "string" ? root : { ...input, worktree: root })
         },
         close(directory: string) {
           server.projects.close(directory)
