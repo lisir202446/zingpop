@@ -3,6 +3,7 @@ import { type Accessor, batch, createEffect, createMemo, onCleanup } from "solid
 import { createStore } from "solid-js/store"
 import { Persist, persisted } from "@/utils/persist"
 import { useCheckServerHealth } from "@/utils/server-health"
+import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 
 type StoredProject = { worktree: string; expanded: boolean; id?: string; name?: string }
 type StoredServer = string | ServerConnection.HttpBase | ServerConnection.Http
@@ -92,6 +93,11 @@ export namespace ServerConnection {
   export const Key = { make: (v: string) => v as Key }
 }
 
+export function serverPersistTarget(hosted = isZingpopHostedWorkbench()) {
+  if (hosted) return Persist.global("server.zingpop")
+  return Persist.global("server", ["server.v3"])
+}
+
 export const { use: useServer, provider: ServerProvider } = createSimpleContext({
   name: "Server",
   init: (props: {
@@ -102,7 +108,7 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
     const checkServerHealth = useCheckServerHealth()
 
     const [store, setStore, _, ready] = persisted(
-      Persist.global("server", ["server.v3"]),
+      serverPersistTarget(),
       createStore({
         list: [] as StoredServer[],
         projects: {} as Record<string, StoredProject[]>,

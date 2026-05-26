@@ -27,6 +27,7 @@ import { SESSION_RECENT_LIMIT } from "./global-sync/types"
 import { sanitizeProject } from "./global-sync/utils"
 import { formatServerError } from "@/utils/server-errors"
 import { queryOptions, skipToken, useQueryClient } from "@tanstack/solid-query"
+import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 
 type GlobalStore = {
   ready: boolean
@@ -45,6 +46,11 @@ type GlobalStore = {
 export const loadSessionsQuery = (directory: string) =>
   queryOptions<null>({ queryKey: [directory, "loadSessions"], queryFn: skipToken })
 
+export function globalSyncProjectPersistTarget(hosted = isZingpopHostedWorkbench()) {
+  if (hosted) return Persist.global("globalSync.project.zingpop")
+  return Persist.global("globalSync.project", ["globalSync.project.v1"])
+}
+
 function createGlobalSync() {
   const globalSDK = useGlobalSDK()
   const language = useLanguage()
@@ -57,7 +63,7 @@ function createGlobalSync() {
   const sessionMeta = new Map<string, { limit: number }>()
 
   const [projectCache, setProjectCache, projectInit] = persisted(
-    Persist.global("globalSync.project", ["globalSync.project.v1"]),
+    globalSyncProjectPersistTarget(),
     createStore({ value: [] as Project[] }),
   )
 
