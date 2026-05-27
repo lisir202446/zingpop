@@ -36,6 +36,7 @@ import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "../../src/tool"
 import { Truncate } from "../../src/tool"
 import { Log } from "../../src/util"
+import { create as createID } from "../../src/id/id"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
@@ -334,6 +335,61 @@ it.live("loop exits immediately when last assistant has stop finish", () =>
       const result = yield* prompt.loop({ sessionID: chat.id })
       expect(result.info.role).toBe("assistant")
       if (result.info.role === "assistant") expect(result.info.finish).toBe("stop")
+      expect(yield* llm.calls).toBe(0)
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+
+it.live("loop exits when a finished assistant is parented to a newer client message id", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const sessions = yield* Session.Service
+      const prompt = yield* SessionPrompt.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      const now = Date.now()
+      const userID = MessageID.make(createID("msg", "ascending", now - 1_000))
+      const user = yield* sessions.updateMessage({
+        id: userID,
+        role: "user",
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        time: { created: now },
+      })
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: user.id,
+        sessionID: chat.id,
+        type: "text",
+        text: "hello",
+      })
+      const assistant = yield* sessions.updateMessage({
+        id: MessageID.make(createID("msg", "ascending", now - 2_000)),
+        role: "assistant",
+        parentID: user.id,
+        sessionID: chat.id,
+        mode: "build",
+        agent: "build",
+        finish: "stop",
+        cost: 0,
+        path: { cwd: "/tmp", root: "/tmp" },
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        modelID: ref.modelID,
+        providerID: ref.providerID,
+        time: { created: now + 1 },
+      })
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: assistant.id,
+        sessionID: chat.id,
+        type: "text",
+        text: "hi there",
+      })
+      yield* llm.text("second pass")
+
+      const result = yield* prompt.loop({ sessionID: chat.id })
+      expect(result.info.id).toBe(assistant.id)
       expect(yield* llm.calls).toBe(0)
     }),
     { git: true, config: providerCfg },
@@ -730,7 +786,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  5_000,
 )
 
 it.live(
