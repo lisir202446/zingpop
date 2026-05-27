@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
-import { mkdir, readdir, rm, stat } from "node:fs/promises"
+import { spawn } from "node:child_process"
+import { mkdir, readFile as fsReadFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import { dirname, join as fsJoin, relative as fsRelative, resolve as fsResolve } from "node:path"
 import { posix as path } from "node:path"
 import { and, Database, eq, isNull, sql } from "./drizzle"
@@ -36,7 +37,11 @@ export namespace WorkbenchProject {
     }
   }
 
-  export function directory(input: { workspaceID: string; projectID: string; env?: Record<string, string | undefined> }) {
+  export function directory(input: {
+    workspaceID: string
+    projectID: string
+    env?: Record<string, string | undefined>
+  }) {
     assertSafeSegment("workspace", input.workspaceID)
     assertSafeSegment("project", input.projectID)
 
@@ -127,7 +132,9 @@ export namespace WorkbenchProject {
       tx
         .select()
         .from(WorkbenchProjectTable)
-        .where(and(eq(WorkbenchProjectTable.workspace_id, input.workspaceID), isNull(WorkbenchProjectTable.timeDeleted)))
+        .where(
+          and(eq(WorkbenchProjectTable.workspace_id, input.workspaceID), isNull(WorkbenchProjectTable.timeDeleted)),
+        )
         .orderBy(WorkbenchProjectTable.timeUpdated),
     )
   }
@@ -200,29 +207,38 @@ export namespace WorkbenchProject {
   }) {
     const git = validateGitImport({ url: input.url, branch: input.branch })
     await rm(input.directory, { recursive: true, force: true })
-    const timeout = Number(input.env?.ZINGPOP_GIT_IMPORT_TIMEOUT_MS ?? process.env.ZINGPOP_GIT_IMPORT_TIMEOUT_MS ?? 60_000)
-    const proc = Bun.spawn(
-      [
-        "git",
-        "clone",
-        "--depth",
-        "1",
-        ...(git.branch ? ["--branch", git.branch] : []),
-        git.url,
-        input.directory,
-      ],
+    const timeout = Number(
+      input.env?.ZINGPOP_GIT_IMPORT_TIMEOUT_MS ?? process.env.ZINGPOP_GIT_IMPORT_TIMEOUT_MS ?? 60_000,
+    )
+    const proc = spawn(
+      "git",
+      ["clone", "--depth", "1", ...(git.branch ? ["--branch", git.branch] : []), git.url, input.directory],
       {
-        stdout: "pipe",
-        stderr: "pipe",
+        env: { ...process.env, ...input.env },
+        stdio: ["ignore", "ignore", "pipe"],
       },
     )
-    const timer = setTimeout(() => proc.kill(), timeout)
-    const code = await proc.exited.finally(() => clearTimeout(timer))
+    const stderr: Buffer[] = []
+    const timedOut = { value: false }
+    proc.stderr.on("data", (chunk) => stderr.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
+    const timer = setTimeout(() => {
+      timedOut.value = true
+      proc.kill()
+    }, timeout)
+    const code = await new Promise<number | null>((resolve, reject) => {
+      proc.once("error", reject)
+      proc.once("close", resolve)
+    }).finally(() => clearTimeout(timer))
     if (code === 0) return
-    throw new Error((await new Response(proc.stderr).text()) || "Git import failed")
+    if (timedOut.value) throw new Error("Git import timed out")
+    throw new Error(Buffer.concat(stderr).toString().trim() || "Git import failed")
   }
 
-  export async function ensureDefault(input: { workspaceID: string; projectID: string; env?: Record<string, string | undefined> }) {
+  export async function ensureDefault(input: {
+    workspaceID: string
+    projectID: string
+    env?: Record<string, string | undefined>
+  }) {
     const existing = await get({ workspaceID: input.workspaceID, projectID: input.projectID })
     if (existing) return existing
     return create({
@@ -258,7 +274,9 @@ export namespace WorkbenchProject {
       tx
         .update(WorkbenchProjectTable)
         .set({ name: input.name })
-        .where(and(eq(WorkbenchProjectTable.workspace_id, input.workspaceID), eq(WorkbenchProjectTable.id, input.projectID))),
+        .where(
+          and(eq(WorkbenchProjectTable.workspace_id, input.workspaceID), eq(WorkbenchProjectTable.id, input.projectID)),
+        ),
     )
   }
 
@@ -267,7 +285,9 @@ export namespace WorkbenchProject {
       tx
         .update(WorkbenchProjectTable)
         .set({ timeDeleted: sql`now()` })
-        .where(and(eq(WorkbenchProjectTable.workspace_id, input.workspaceID), eq(WorkbenchProjectTable.id, input.projectID))),
+        .where(
+          and(eq(WorkbenchProjectTable.workspace_id, input.workspaceID), eq(WorkbenchProjectTable.id, input.projectID)),
+        ),
     )
   }
 
@@ -282,7 +302,7 @@ export namespace WorkbenchProject {
         if (!uploadAllowed({ path: file.path, size: content.byteLength })) return
         const target = resolveFile({ directory: input.directory, relative: file.path })
         await mkdir(dirname(target), { recursive: true })
-        await Bun.write(target, content)
+        await writeFile(target, content)
       }),
     )
   }
@@ -306,7 +326,9 @@ export namespace WorkbenchProject {
             {
               path: safeRelativePath(relative),
               size: info.size,
-              sha256: createHash("sha256").update(Buffer.from(await Bun.file(absolute).arrayBuffer())).digest("hex"),
+              sha256: createHash("sha256")
+                .update(await fsReadFile(absolute))
+                .digest("hex"),
               timeUpdated: info.mtimeMs,
             },
           ]
@@ -322,6 +344,6 @@ export namespace WorkbenchProject {
   }
 
   export async function readFile(input: { directory: string; path: string }) {
-    return Bun.file(resolveFile({ directory: input.directory, relative: input.path }))
+    return fsReadFile(resolveFile({ directory: input.directory, relative: input.path }))
   }
 }

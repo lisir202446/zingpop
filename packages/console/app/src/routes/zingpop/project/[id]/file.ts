@@ -10,7 +10,8 @@ export async function GET(input: APIEvent) {
   const target = new URL(input.request.url).searchParams.get("path")
   if (!target) return badRequest("Missing path")
   try {
-    return new Response(await (await WorkbenchProject.readFile({ directory: project.directory, path: target })).arrayBuffer(), {
+    const file = await WorkbenchProject.readFile({ directory: project.directory, path: target })
+    return new Response(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer, {
       headers: { "content-type": "application/octet-stream" },
     })
   } catch (error) {

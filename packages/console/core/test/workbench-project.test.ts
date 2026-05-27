@@ -1,6 +1,6 @@
-import { mkdtemp, rm } from "node:fs/promises"
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { delimiter, join } from "node:path"
 import { afterEach, describe, expect, test } from "bun:test"
 import { WorkbenchProject } from "../src/workbench-project"
 
@@ -67,6 +67,47 @@ describe("workbench project helpers", () => {
         size: 5,
       }),
     )
+  })
+
+  test("runtime project helpers use Node-compatible APIs", async () => {
+    expect(await readFile(join(import.meta.dir, "..", "src", "workbench-project.ts"), "utf8")).not.toContain("Bun.")
+  })
+
+  test("project file helpers upload, read, and manifest files", async () => {
+    const directory = await tempProject()
+    await WorkbenchProject.uploadFiles({
+      directory,
+      files: [{ path: "README.md", contentBase64: Buffer.from("node runtime").toString("base64") }],
+    })
+    expect((await WorkbenchProject.readFile({ directory, path: "README.md" })).toString()).toBe("node runtime")
+    expect(await WorkbenchProject.manifest({ directory })).toContainEqual(
+      expect.objectContaining({
+        path: "README.md",
+        sha256: "beb65d9a4e2839ad78104428e8b1013e073e0d1ad1eac0ef56abed8fc48a8bf0",
+        size: 12,
+      }),
+    )
+  })
+
+  test("git imports run through the git executable", async () => {
+    const directory = await tempProject()
+    const bin = await tempProject()
+    if (process.platform === "win32") {
+      await writeFile(join(bin, "git.cmd"), '@echo off\r\nmkdir "%5"\r\necho fake clone> "%5\\README.md"\r\n')
+    } else {
+      await writeFile(join(bin, "git"), '#!/bin/sh\nmkdir -p "$5"\nprintf \'fake clone\\n\' > "$5/README.md"\n')
+      await chmod(join(bin, "git"), 0o755)
+    }
+
+    await WorkbenchProject.cloneGit({
+      directory,
+      url: "https://github.com/octocat/Hello-World.git",
+      env: {
+        PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+        ZINGPOP_GIT_IMPORT_TIMEOUT_MS: "5000",
+      },
+    })
+    expect(await readFile(join(directory, "README.md"), "utf8")).toContain("fake clone")
   })
 
   test("rejects unsafe git import inputs", () => {
