@@ -13,7 +13,7 @@ describe("defaultHostedServerUrl", () => {
     ).toBe("https://app.zingpop.cn")
   })
 
-  test("keeps the stored server outside the hosted workbench", () => {
+  test("uses the current origin in dev so vite can proxy API requests", () => {
     expect(
       defaultHostedServerUrl({
         hostname: "localhost",
@@ -22,6 +22,17 @@ describe("defaultHostedServerUrl", () => {
         dev: true,
         devHost: "localhost",
         devPort: "4096",
+      }),
+    ).toBe("http://localhost:3001")
+  })
+
+  test("keeps the stored server outside hosted and dev workbenches", () => {
+    expect(
+      defaultHostedServerUrl({
+        hostname: "localhost",
+        origin: "https://example.com",
+        stored: "http://127.0.0.1:4096",
+        dev: false,
       }),
     ).toBe("http://127.0.0.1:4096")
   })

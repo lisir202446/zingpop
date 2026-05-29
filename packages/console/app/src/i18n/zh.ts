@@ -31,6 +31,10 @@ export const dict = {
   "legal.brand": "品牌",
   "legal.privacy": "隐私",
   "legal.terms": "条款",
+  "legal.dataProcessing": "数据处理",
+  "legal.thirdParty": "第三方",
+  "legal.accountDeletion": "注销与删除",
+  "legal.openSource": "开源声明",
 
   "email.title": "第一时间获知我们的新产品发布",
   "email.subtitle": "加入候补名单，获取抢先体验资格。",

@@ -43,6 +43,14 @@ describe("nginx workbench isolation", () => {
     expect(config).toContain("location ~ ^/(global/(dispose|upgrade)|instance/dispose)$")
   })
 
+  test("enforces basic workbench and project API rate limits at the public edge", () => {
+    expect(config).toContain("limit_req_zone $binary_remote_addr zone=zingpop_app_project:10m rate=60r/m;")
+    expect(config).toContain("limit_req_zone $binary_remote_addr zone=zingpop_app_workbench:10m rate=120r/m;")
+    expect(config).toContain("limit_req_status 429;")
+    expect(config).toContain("limit_req zone=zingpop_app_project burst=120 nodelay;")
+    expect(config).toContain("limit_req zone=zingpop_app_workbench burst=240 nodelay;")
+  })
+
   test("allows session status reload through the authorized directory proxy", () => {
     const block = locationBlock("/session/status")
 

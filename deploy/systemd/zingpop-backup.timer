@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Zingpop production backup daily
+Documentation=https://www.zingpop.cn
+
+[Timer]
+OnCalendar=*-*-* 03:10:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=zingpop-backup.service
+
+[Install]
+WantedBy=timers.target

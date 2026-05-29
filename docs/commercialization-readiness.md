@@ -103,6 +103,34 @@ Remaining manual auth-flow confirmation before marking the whole auth/SMS loop c
 - Forgot-password reset through SMS code and a new password.
 - Same public login failure copy for unregistered phone plus random password and registered phone plus wrong password.
 
+### 2026-05-27: Local Commercialization Materials And Audit Hooks Added
+
+Local source now includes the launch-facing legal, compliance, security, and open-source materials needed before a production upload:
+
+- User agreement, privacy policy, data-processing notice, third-party processor disclosure, account deletion/data deletion flow, and public open-source notice routes were added under `/legal/*`.
+- The public footer includes the ICP filing link and the 公安联网备案 link `粤公网安备44010602015865号`.
+- `docs/security-operations.md` defines the production secret rotation, rate-limit, audit-log, abnormal-use, filing-display, and incident-response runbook.
+- `scripts/production-security-check.mjs` checks accidental secret patterns and production environment hygiene before upload.
+- `scripts/license-audit.mjs` checks direct production dependency licenses and keeps packages with missing license metadata in explicit manual review.
+- Console auth/project routes emit structured `audit:` records for SMS, login/reset, project create/list/rename/delete/import/upload/read, manifest, and file-read actions.
+
+Remaining external launch actions from this checkpoint: rotate production secrets, revoke exposed GitHub tokens, confirm paid SaaS qualification, complete payment-provider production verification, and run production browser E2E after deployment.
+
+### 2026-05-28: Local Operations Controls Added
+
+Local source now includes the first production operations layer needed before the next upload:
+
+- Nginx public-edge rate limits were added for workbench/project routes on `app.zingpop.cn` and auth/model/general routes on `www.zingpop.cn`.
+- `scripts/install-systemd.sh` now installs backup and health-check systemd timers, a Zingpop logrotate config, and operations helper scripts.
+- `scripts/production-backup.sh` backs up MySQL plus `/srv/zingpop`, `/etc/zingpop`, Nginx, systemd, and logrotate config while excluding the backup directory itself.
+- `scripts/production-restore-drill.sh` verifies backup checksums, gzip/tar integrity, and can optionally restore into a non-production drill database.
+- `scripts/production-health-check.mjs` checks public URLs, TLS certificate lifetime, systemd services, timers, disk headroom, MySQL, and recent backups.
+- `scripts/production-rotate-local-secrets.sh` rotates local generated Zingpop secrets in `/etc/zingpop/zingpop.env`.
+- `docs/model-provider-compliance.md` defines the model-provider commercial terms, data-retention, training, cross-border, abuse-policy, and generative-AI filing/security-assessment signoff gate.
+- `docs/open-source-notices.md` now records reviewed MIT license evidence for `@openauthjs/openauth` and `@solidjs/start`.
+
+Remaining external launch actions from this checkpoint: actually deploy these controls, rotate production/provider/GitHub secrets in their consoles, enable the timers on the server, run at least one backup plus restore drill, configure an alert webhook, verify reboot recovery, and obtain the model-provider/legal compliance signoff.
+
 ## Hard Blockers
 
 ### 1. Business Qualification
@@ -115,8 +143,9 @@ Remaining manual auth-flow confirmation before marking the whole auth/SMS loop c
 
 Operational reference:
 
-- `互联网信息服务管理办法`: commercial internet information services use a license system, non-commercial services use a filing system.
+- `互联网信息服务管理办法`: commercial internet information services use a license system; non-commercial services use a filing system.
 - `非经营性互联网信息服务备案管理办法`: filed non-commercial websites should display the filing number at the homepage footer and link to the MIIT filing system.
+- `计算机信息网络国际联网安全保护管理办法`: websites should complete the public-security filing within the required post-launch window and display the filing mark after approval.
 
 ### 2. Product Account And SMS Completion
 
@@ -187,6 +216,7 @@ Operational reference:
 
 - `中华人民共和国个人信息保护法`: personal information processing requires a lawful basis, clear notice, necessary scope, user rights handling, and additional requirements for separate consent in specific scenarios.
 - `中华人民共和国网络安全法`: network operators have security protection obligations, including security management, technical protection, logging, backup, and incident response.
+- `中华人民共和国数据安全法`: data processing must include classification, risk monitoring, incident response, and security management measures.
 
 ### 6. Security And Secrets
 
@@ -199,6 +229,7 @@ Operational reference:
 - Keep public `3000`, `3001`, and `4096` closed.
 - Add rate limits for auth, SMS sending, project import, terminal/command execution, and model calls.
 - Add audit logs for login, project access, command execution, credential changes, and admin operations.
+- Keep `scripts/production-rotate-local-secrets.sh`, `scripts/production-security-check.mjs`, and provider-console rotation evidence as the launch record for secret rotation.
 
 ### 7. Open-Source And IP Review
 
@@ -216,6 +247,7 @@ Operational reference:
 - Add user-visible disclosure for third-party model processing.
 - Add abuse prevention for harmful content, credential exfiltration, mass scraping, and automated attack workflows.
 - If Zingpop provides generative AI services with public-opinion attributes or social mobilization capability, confirm whether security assessment, algorithm filing, or related procedures are required.
+- Use `docs/model-provider-compliance.md` as the required signoff record before enabling any model provider for broad paid use.
 
 Operational reference:
 
@@ -256,11 +288,13 @@ Before accepting paying users:
 - Add log rotation for Nginx, systemd services, auth, app errors, SMS, model calls, and payment callbacks.
 - Add monitoring and alerting for service health, disk, memory, CPU, certificate expiry, database availability, SMS failures, model-provider failures, payment callback failures, and abnormal error rates.
 - Prepare an incident runbook and emergency rollback path.
+- Install `zingpop-backup.timer`, `zingpop-health-check.timer`, `/etc/logrotate.d/zingpop`, and the rollback procedure from `docs/security-operations.md` on the production server.
 
 ## Commercialization Checklist
 
 - [ ] Paid SaaS qualification reviewed; ICP filing/license requirements confirmed.
-- [ ] ICP filing number is displayed in the website footer with the required MIIT link.
+- [x] ICP filing number is displayed in the website footer with the required MIIT link.
+- [x] 公安联网备案 number is displayed in the website footer with the required public-security link.
 - [x] Phone registration works on production.
 - [ ] Phone-password login works on production.
 - [ ] Forgot-password reset works on production.
@@ -272,21 +306,24 @@ Before accepting paying users:
 - [x] Zingpop project table, cloud directory isolation, auth-gated project resolution, `/_zingpop/` API, and hosted local-folder picker are implemented.
 - [ ] Production browser QA remains: Chrome/Edge native folder picker, upload, cloud edit, sync back, conflict handling, and two-account isolation probe.
 - [ ] Broader tenant-scope verification covers files, terminals, command execution, logs, model-call artifacts, and project import/creation.
-- [ ] User agreement is published.
-- [ ] Privacy policy is published.
-- [ ] Data processing notice is published.
-- [ ] Account deletion and user data deletion flow exists.
-- [ ] Third-party processors and model providers are disclosed.
-- [ ] Default/private customer code training policy is documented.
+- [x] User agreement is published in the local source.
+- [x] Privacy policy is published in the local source.
+- [x] Data processing notice is published in the local source.
+- [x] Account deletion and user data deletion flow exists in the local source.
+- [x] Third-party processors and model providers are disclosed in the local source.
+- [x] Default/private customer code training policy is documented in the local source.
 - [ ] Production secrets are rotated and stored outside Git.
 - [ ] Previously exposed GitHub tokens are revoked and recreated.
 - [ ] Auth, SMS, model-call, and command-execution rate limits are active.
-- [ ] Audit logs exist for sensitive user and admin actions.
-- [ ] MIT license and original copyright notices are retained.
-- [ ] Dependency license audit is complete.
-- [ ] Open-source notices are published.
-- [ ] Zingpop branding replaces user-facing opencode branding where appropriate.
+- [x] Deployable Nginx edge rate limits are present in the local source for app/workbench, auth, model, and general routes.
+- [x] Audit logs exist for auth, SMS, project, file, manifest, and upload actions in the local source.
+- [x] MIT license and original copyright notices are retained.
+- [x] Dependency license audit script is present and blocks unreviewed high-risk direct dependency licenses.
+- [x] Manual license-review overrides are documented for `@openauthjs/openauth` and `@solidjs/start`.
+- [x] Open-source notices are published in the local source.
+- [x] Zingpop branding replaces user-facing opencode branding where appropriate.
 - [ ] Model provider commercial terms are reviewed.
+- [x] Model provider and generative-AI compliance signoff template is present in the local source.
 - [ ] Generative AI filing/security-assessment applicability is reviewed.
 - [ ] WeChat Pay merchant account is approved and production credentials are configured.
 - [ ] Alipay merchant account is approved and production credentials are configured.
@@ -300,11 +337,14 @@ Before accepting paying users:
 - [ ] Server reboot recovery is verified.
 - [ ] Backups are configured and restore-tested.
 - [ ] Monitoring, alerting, log rotation, and incident response are ready.
+- [x] Backup, restore-drill, health-check, logrotate, and rollback artifacts are present in the local source.
 
 ## Source Links
 
 - MIIT `互联网信息服务管理办法`: https://gzca.miit.gov.cn/zwgk/hlwgl/art/2020/art_10348b802f064633af451a3f1f6d04a1.html
 - MIIT `非经营性互联网信息服务备案管理办法`: https://www.miit.gov.cn/gyhxxhb/jgsj/cyzcyfgs/bmgz/xxtxl/art/2024/art_84a0cfa0ebd049bbbe751dca9a008e56.html
+- 公安联网备案办理流程参考: https://ga.sz.gov.cn/ZT/HLWSYSQ/WSBLLC/content/post_10206896.html
+- 公安联网备案政务事项参考: https://banshi.beijing.gov.cn/pubtask/task/1/110117000000/114452de-b7fe-42f1-a644-1a6756b4dbb5.html
 - NPC `中华人民共和国个人信息保护法`: https://www.npc.gov.cn/npc/c2/c30834/202108/t20210820_313088.html
 - MIIT `中华人民共和国网络安全法`: https://www.miit.gov.cn/ztzl/rdzt/tdzzyyhlwsdrhfzjkjstggyhlwpt/zcfb/art/2020/art_41be9e94ecc5433899ca88a0339a38b6.html
 - MIIT `生成式人工智能服务管理暂行办法`: https://www.miit.gov.cn/zcfg/qtl/art/2023/art_f4e8f71ae1dc43b0980b962907b7738f.html
