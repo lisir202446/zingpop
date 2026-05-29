@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
-import { createSessionKeyReader, ensureSessionKey, pruneSessionKeys } from "./layout"
+import { createSessionKeyReader, ensureSessionKey, hostedProjectWorktreesToClose, pruneSessionKeys } from "./layout"
 
 describe("layout session-key helpers", () => {
   test("couples touch and scroll seed in order", () => {
@@ -65,5 +65,29 @@ describe("pruneSessionKeys", () => {
     })
 
     expect(drop).toEqual([])
+  })
+})
+
+describe("hostedProjectWorktreesToClose", () => {
+  test("keeps hosted account projects and closes stale persisted worktrees", () => {
+    const stale = hostedProjectWorktreesToClose(
+      [
+        { worktree: "/srv/zingpop/workspaces/default" },
+        { worktree: "/srv/zingpop/workspaces/wrk_1/projects/default/" },
+        { worktree: "/srv/zingpop/workspaces/wrk_1/projects/default-sandbox" },
+      ],
+      [
+        {
+          worktree: "/srv/zingpop/workspaces/wrk_1/projects/default",
+          sandboxes: ["/srv/zingpop/workspaces/wrk_1/projects/default-sandbox"],
+        },
+      ],
+    )
+
+    expect(stale).toEqual(["/srv/zingpop/workspaces/default"])
+  })
+
+  test("waits for hosted projects before closing persisted worktrees", () => {
+    expect(hostedProjectWorktreesToClose([{ worktree: "/srv/zingpop/workspaces/default" }], [])).toEqual([])
   })
 })

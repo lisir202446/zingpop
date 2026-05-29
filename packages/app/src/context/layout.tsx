@@ -56,6 +56,21 @@ export type LocalProject = Partial<Project> & { worktree: string; expanded: bool
 
 export type ReviewDiffStyle = "unified" | "split"
 
+function projectKey(directory: string) {
+  const value = directory.replaceAll("\\", "/")
+  if (/^\/+$/i.test(value)) return "/"
+  return value.replace(/\/+$/, "")
+}
+
+export function hostedProjectWorktreesToClose(
+  local: Array<{ worktree: string }>,
+  hosted: Array<{ worktree: string; sandboxes?: string[] }>,
+) {
+  if (hosted.length === 0) return []
+  const allowed = new Set(hosted.flatMap((project) => [project.worktree, ...(project.sandboxes ?? [])]).map(projectKey))
+  return local.map((project) => project.worktree).filter((worktree) => !allowed.has(projectKey(worktree)))
+}
+
 export function ensureSessionKey(key: string, touch: (key: string) => void, seed: (key: string) => void) {
   touch(key)
   seed(key)
@@ -461,9 +476,17 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     createEffect(() => {
       const projects = server.projects.list()
       const seen = new Set(projects.map((project) => project.worktree))
+      const stale = isZingpopHostedWorkbench()
+        ? hostedProjectWorktreesToClose(projects, globalSync.ready ? globalSync.data.project : [])
+        : []
 
       batch(() => {
+        for (const worktree of stale) {
+          server.projects.close(worktree)
+        }
+
         for (const project of projects) {
+          if (stale.includes(project.worktree)) continue
           const root = rootFor(project.worktree)
           if (root === project.worktree) continue
 
@@ -548,6 +571,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     let sessionTimer: number | undefined
 
     onMount(() => {
+      if (isZingpopHostedWorkbench()) return
       sessionFrame = requestAnimationFrame(() => {
         sessionFrame = undefined
         sessionTimer = window.setTimeout(() => {
