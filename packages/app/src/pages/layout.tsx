@@ -653,6 +653,12 @@ export default function Layout(props: ParentProps) {
     })
   })
 
+  const sessionDirsToLoad = createMemo(() => {
+    const dirs = visibleSessionDirs()
+    if (!isZingpopHostedWorkbench()) return dirs
+    return hostedVisibleSessionDirs(dirs, globalSync.data.project, globalSync.ready)
+  })
+
   createEffect(() => {
     if (!pageReady()) return
     if (!layoutReady()) return
@@ -672,7 +678,7 @@ export default function Layout(props: ParentProps) {
 
   const currentSessions = createMemo(() => {
     const now = Date.now()
-    const dirs = visibleSessionDirs()
+    const dirs = sessionDirsToLoad()
     if (dirs.length === 0) return [] as Session[]
 
     const result: Session[] = []
@@ -1902,17 +1908,14 @@ export default function Layout(props: ParentProps) {
 
   createEffect(
     on(
-      visibleSessionDirs,
+      sessionDirsToLoad,
       (dirs) => {
-        const visible = isZingpopHostedWorkbench()
-          ? hostedVisibleSessionDirs(dirs, globalSync.data.project, globalSync.ready)
-          : dirs
-        if (visible.length === 0) {
+        if (dirs.length === 0) {
           loadedSessionDirs.clear()
           return
         }
 
-        const next = new Set(visible)
+        const next = new Set(dirs)
         for (const directory of next) {
           if (loadedSessionDirs.has(directory)) continue
           void globalSync.project.loadSessions(directory)
