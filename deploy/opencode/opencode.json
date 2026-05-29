@@ -3,11 +3,11 @@
   "autoupdate": false,
   "share": "disabled",
   "enabled_providers": ["zai-glm"],
-  "model": "zai-glm/glm-5.1",
+  "model": "zai-glm/glm-5-turbo",
   "small_model": "zai-glm/glm-5-turbo",
   "agent": {
     "build": {
-      "model": "zai-glm/glm-5.1"
+      "model": "zai-glm/glm-5-turbo"
     }
   },
   "provider": {
