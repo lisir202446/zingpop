@@ -34,9 +34,21 @@ describe("nginx workbench isolation", () => {
 
   test("filters event streams and blocks shared management routes on the public app host", () => {
     expect(config).toContain("location = /global/event")
-    expect(config).toContain("proxy_pass http://127.0.0.1:3000/auth/workbench/event;")
+    expect(config).toContain("proxy_pass http://127.0.0.1:3000/auth/workbench/event$is_args$args;")
+    expect(config).toContain("proxy_set_header X-Original-URI $request_uri;")
+    expect(config).toContain("location ^~ /_zingpop/")
+    expect(config).toContain("proxy_pass http://127.0.0.1:3000/zingpop/")
     expect(config).toContain("location ~ ^/(sync|tui)(/|$)")
+    expect(config).toContain("location ~ ^/experimental/workspace(/|$)")
     expect(config).toContain("location ~ ^/(global/(dispose|upgrade)|instance/dispose)$")
+  })
+
+  test("enforces basic workbench and project API rate limits at the public edge", () => {
+    expect(config).toContain("limit_req_zone $binary_remote_addr zone=zingpop_app_project:10m rate=60r/m;")
+    expect(config).toContain("limit_req_zone $binary_remote_addr zone=zingpop_app_workbench:10m rate=120r/m;")
+    expect(config).toContain("limit_req_status 429;")
+    expect(config).toContain("limit_req zone=zingpop_app_project burst=120 nodelay;")
+    expect(config).toContain("limit_req zone=zingpop_app_workbench burst=240 nodelay;")
   })
 
   test("allows session status reload through the authorized directory proxy", () => {

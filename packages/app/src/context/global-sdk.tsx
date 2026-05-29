@@ -4,6 +4,7 @@ import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { batch, onCleanup, onMount } from "solid-js"
 import z from "zod"
+import { decode64 } from "@/utils/base64"
 import { createSdkForServer } from "@/utils/server"
 import { useLanguage } from "./language"
 import { usePlatform } from "./platform"
@@ -12,6 +13,13 @@ import { useServer } from "./server"
 const abortError = z.object({
   name: z.literal("AbortError"),
 })
+
+export function routeEventDirectory(pathname = typeof location === "object" ? location.pathname : undefined) {
+  if (!pathname) return
+  const directory = decode64(pathname.split("/").find(Boolean))
+  if (!directory) return
+  if (directory.startsWith("/") || /^[A-Za-z]:[\\/]/.test(directory) || directory.startsWith("\\\\")) return directory
+}
 
 export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleContext({
   name: "GlobalSDK",
@@ -35,11 +43,6 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     const currentServer = server.current
     if (!currentServer) throw new Error(language.t("error.globalSDK.noServerAvailable"))
 
-    const eventSdk = createSdkForServer({
-      signal: abort.signal,
-      fetch: eventFetch,
-      server: currentServer.http,
-    })
     const emitter = createGlobalEmitter<{
       [key: string]: Event
     }>()
@@ -108,6 +111,8 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     let attempt: AbortController | undefined
     let run: Promise<void> | undefined
     let started = false
+    let activeDirectory = routeEventDirectory()
+    let routeTimer: ReturnType<typeof setInterval> | undefined
     const HEARTBEAT_TIMEOUT_MS = 15_000
     let lastEventAt = Date.now()
     let heartbeat: ReturnType<typeof setTimeout> | undefined
@@ -137,7 +142,13 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
           }
           abort.signal.addEventListener("abort", onAbort)
           try {
-            const events = await eventSdk.global.event({
+            const directory = routeEventDirectory()
+            const events = await createSdkForServer({
+              signal: abort.signal,
+              fetch: eventFetch,
+              server: currentServer.http,
+              directory,
+            }).global.event({
               signal: attempt.signal,
               onSseError: (error) => {
                 if (aborted(error)) return
@@ -145,6 +156,7 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
                 streamErrorLogged = true
                 console.error("[global-sdk] event stream error", {
                   url: currentServer.http.url,
+                  directory,
                   fetch: eventFetch ? "platform" : "webview",
                   error,
                 })
@@ -187,6 +199,7 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
               streamErrorLogged = true
               console.error("[global-sdk] event stream failed", {
                 url: currentServer.http.url,
+                directory: routeEventDirectory(),
                 fetch: eventFetch ? "platform" : "webview",
                 error,
               })
@@ -214,6 +227,13 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     }
 
     onMount(() => {
+      routeTimer = setInterval(() => {
+        const next = routeEventDirectory()
+        if (next === activeDirectory) return
+        activeDirectory = next
+        attempt?.abort()
+      }, 500)
+
       makeEventListener(document, "visibilitychange", () => {
         if (document.visibilityState !== "visible") return
         if (!started) return
@@ -223,6 +243,7 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     })
 
     onCleanup(() => {
+      if (routeTimer) clearInterval(routeTimer)
       stop()
       abort.abort()
       flush()

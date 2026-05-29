@@ -64,6 +64,8 @@ import { DebugBar } from "@/components/debug-bar"
 import { Titlebar } from "@/components/titlebar"
 import { useServer } from "@/context/server"
 import { useLanguage, type Locale } from "@/context/language"
+import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
+import { syncProjectToLocal, type ZingpopProject } from "@/utils/local-folder-sync"
 import {
   displayName,
   effectiveWorkspaceOrder,
@@ -91,7 +93,7 @@ import { SidebarContent } from "./layout/sidebar-shell"
 
 export default function Layout(props: ParentProps) {
   const [store, setStore, , ready] = persisted(
-    Persist.global("layout.page", ["layout.page.v1"]),
+    isZingpopHostedWorkbench() ? Persist.global("layout.page.zingpop") : Persist.global("layout.page", ["layout.page.v1"]),
     createStore({
       lastProjectSession: {} as { [directory: string]: { directory: string; id: string; at: number } },
       activeProject: undefined as string | undefined,
@@ -1373,8 +1375,9 @@ export default function Layout(props: ParentProps) {
     navigateWithSidebarReset(`/${base64Encode(session.directory)}/session/${session.id}`)
   }
 
-  function openProject(directory: string, navigate = true) {
-    layout.projects.open(directory)
+  function openProject(input: string | ZingpopProject, navigate = true) {
+    const directory = typeof input === "string" ? input : input.worktree
+    layout.projects.open(input)
     if (navigate) return navigateToProject(directory)
   }
 
@@ -1412,6 +1415,18 @@ export default function Layout(props: ParentProps) {
     const current = displayName(project)
     if (next === current) return
     const name = next === getFilename(project.worktree) ? "" : next
+
+    if (isZingpopHostedWorkbench() && project.id && project.id !== "global") {
+      const response = await fetch(`/_zingpop/project/${project.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      if (!response.ok) throw new Error("Failed to rename project")
+      globalSync.project.meta(project.worktree, { name })
+      return
+    }
 
     if (project.id && project.id !== "global") {
       await globalSDK.client.project.update({ projectID: project.id, directory: project.worktree, name })
@@ -1472,7 +1487,7 @@ export default function Layout(props: ParentProps) {
   }
 
   async function chooseProject() {
-    function resolve(result: string | string[] | null) {
+    function resolve(result: string | string[] | ZingpopProject | null) {
       if (Array.isArray(result)) {
         for (const directory of result) {
           void openProject(directory, false)
@@ -1481,6 +1496,18 @@ export default function Layout(props: ParentProps) {
       } else if (result) {
         void openProject(result)
       }
+    }
+
+    if (isZingpopHostedWorkbench()) {
+      const run = ++dialogRun
+      void import("@/components/dialog-zingpop-project").then((x) => {
+        if (dialogDead || dialogRun !== run) return
+        dialog.show(
+          () => <x.DialogZingpopProject onSelect={resolve} />,
+          () => resolve(null),
+        )
+      })
+      return
     }
 
     if (platform.openDirectoryPickerDialog && server.isLocal()) {
@@ -1497,6 +1524,34 @@ export default function Layout(props: ParentProps) {
           () => <x.DialogSelectDirectory multiple={true} onSelect={resolve} />,
           () => resolve(null),
         )
+      })
+    }
+  }
+
+  async function syncLocalProject(project: LocalProject) {
+    if (!project.id || project.id === "global") return
+    try {
+      const result = await syncProjectToLocal(project.id)
+      if (result.missingHandle) {
+        showToast({
+          variant: "error",
+          title: "无法同步到本机",
+          description: "请重新打开本机文件夹以恢复浏览器授权",
+        })
+        return
+      }
+      showToast({
+        title: "已同步到本机",
+        description:
+          result.conflicts.length > 0
+            ? `${result.written.length} 个文件已写回，${result.conflicts.length} 个文件需要手动处理冲突`
+            : `${result.written.length} 个文件已写回`,
+      })
+    } catch (error) {
+      showToast({
+        variant: "error",
+        title: "同步失败",
+        description: error instanceof Error ? error.message : String(error),
       })
     }
   }
@@ -2086,6 +2141,8 @@ export default function Layout(props: ParentProps) {
       return item.vcs === "git" || layout.sidebar.workspaces(item.worktree)()
     })
     const homedir = createMemo(() => globalSync.data.path.home)
+    const hosted = createMemo(() => isZingpopHostedWorkbench())
+    const subtitle = createMemo(() => (hosted() ? projectName() : worktree().replace(homedir(), "~")))
 
     return (
       <div
@@ -2143,7 +2200,7 @@ export default function Layout(props: ParentProps) {
                     <Tooltip
                       placement="bottom"
                       gutter={2}
-                      value={worktree()}
+                      value={subtitle()}
                       class="shrink-0"
                       contentStyle={{
                         "max-width": "640px",
@@ -2151,7 +2208,7 @@ export default function Layout(props: ParentProps) {
                       }}
                     >
                       <span class="text-12-regular text-text-base truncate select-text">
-                        {worktree().replace(homedir(), "~")}
+                        {subtitle()}
                       </span>
                     </Tooltip>
                   </div>
@@ -2208,6 +2265,19 @@ export default function Layout(props: ParentProps) {
                             {language.t("sidebar.project.clearNotifications")}
                           </DropdownMenu.ItemLabel>
                         </DropdownMenu.Item>
+                        <Show when={hosted() && project().id && project().id !== "global"}>
+                          <DropdownMenu.Item
+                            data-action="project-sync-local"
+                            data-project={slug()}
+                            onSelect={() => {
+                              const item = project()
+                              if (!item) return
+                              void syncLocalProject(item)
+                            }}
+                          >
+                            <DropdownMenu.ItemLabel>同步到本机</DropdownMenu.ItemLabel>
+                          </DropdownMenu.Item>
+                        </Show>
                         <DropdownMenu.Separator />
                         <DropdownMenu.Item
                           data-action="project-close-menu"

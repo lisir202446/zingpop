@@ -12,6 +12,7 @@ import { getRequestEvent } from "solid-js/web"
 import { useAuthSession } from "~/context/auth"
 import { useI18n } from "~/context/i18n"
 import { i18n } from "~/i18n"
+import { auditError, auditRequest } from "~/lib/audit-log"
 import { localizeError, formError } from "~/lib/form-error"
 import { authSuccessRedirectLocation } from "~/lib/workbench-redirect"
 import { localeFromRequest } from "~/lib/language"
@@ -83,12 +84,24 @@ function readConfirmPassword(form: FormData) {
 
 async function sendCode(form: FormData) {
   "use server"
+  const request = getRequestEvent()?.request
   const phone = readPhone(form)
   if (!phone) return { error: formError.phoneRequired }
 
   return PhoneAuth.sendCode({ phone, ip: readIP() })
-    .then((data) => ({ error: undefined, data }))
-    .catch((error: Error) => ({ error: authActionError(error) }))
+    .then((data) => {
+      auditRequest({ event: "auth.sms.send", request, status: "success" })
+      return { error: undefined, data }
+    })
+    .catch((error: Error) => {
+      auditRequest({
+        event: "auth.sms.send",
+        request,
+        status: "failure",
+        detail: auditError(error),
+      })
+      return { error: authActionError(error) }
+    })
 }
 
 function authActionError(error: Error) {
@@ -114,8 +127,24 @@ const loginWithPassword = action(async (form: FormData) => {
   const next = (form.get("continue") as string | null) ?? ""
 
   return PhonePasswordAuth.login({ phone, password })
-    .then((data) => startPhoneSession({ ...data, request, next }))
-    .catch((error: Error) => ({ error: authActionError(error) }))
+    .then((data) => {
+      auditRequest({
+        event: "auth.password.login",
+        request,
+        accountID: data.accountID,
+        status: "success",
+      })
+      return startPhoneSession({ ...data, request, next })
+    })
+    .catch((error: Error) => {
+      auditRequest({
+        event: "auth.password.login",
+        request,
+        status: "failure",
+        detail: auditError(error),
+      })
+      return { error: authActionError(error) }
+    })
 }, "auth.phone.password.login")
 
 const registerWithPassword = action(async (form: FormData) => {
@@ -137,8 +166,24 @@ const registerWithPassword = action(async (form: FormData) => {
   const next = (form.get("continue") as string | null) ?? ""
 
   return PhonePasswordAuth.register({ phone, code, password })
-    .then((data) => startPhoneSession({ ...data, request, next }))
-    .catch((error: Error) => ({ error: authActionError(error) }))
+    .then((data) => {
+      auditRequest({
+        event: "auth.password.register",
+        request,
+        accountID: data.accountID,
+        status: "success",
+      })
+      return startPhoneSession({ ...data, request, next })
+    })
+    .catch((error: Error) => {
+      auditRequest({
+        event: "auth.password.register",
+        request,
+        status: "failure",
+        detail: auditError(error),
+      })
+      return { error: authActionError(error) }
+    })
 }, "auth.phone.password.register")
 
 const resetPassword = action(async (form: FormData) => {
@@ -160,8 +205,24 @@ const resetPassword = action(async (form: FormData) => {
   const next = (form.get("continue") as string | null) ?? ""
 
   return PhonePasswordAuth.reset({ phone, code, password })
-    .then((data) => startPhoneSession({ ...data, request, next }))
-    .catch((error: Error) => ({ error: authActionError(error) }))
+    .then((data) => {
+      auditRequest({
+        event: "auth.password.reset",
+        request,
+        accountID: data.accountID,
+        status: "success",
+      })
+      return startPhoneSession({ ...data, request, next })
+    })
+    .catch((error: Error) => {
+      auditRequest({
+        event: "auth.password.reset",
+        request,
+        status: "failure",
+        detail: auditError(error),
+      })
+      return { error: authActionError(error) }
+    })
 }, "auth.phone.password.reset")
 
 function FormError(props: { error?: string }) {

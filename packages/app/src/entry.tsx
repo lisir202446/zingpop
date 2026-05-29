@@ -6,6 +6,7 @@ import { type Platform, PlatformProvider } from "@/context/platform"
 import { dict as en } from "@/i18n/en"
 import { dict as zh } from "@/i18n/zh"
 import { handleNotificationClick } from "@/utils/notification-click"
+import { defaultHostedServerUrl } from "@/utils/hosted-server"
 import pkg from "../package.json"
 import { ServerConnection } from "./context/server"
 
@@ -98,16 +99,25 @@ if (!(root instanceof HTMLElement) && import.meta.env.DEV) {
 }
 
 const getCurrentUrl = () => {
-  if (location.hostname.includes("opencode.ai")) return "http://localhost:4096"
-  if (import.meta.env.DEV)
-    return `http://${import.meta.env.VITE_OPENCODE_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_OPENCODE_SERVER_PORT ?? "4096"}`
-  return location.origin
+  return defaultHostedServerUrl({
+    hostname: location.hostname,
+    origin: location.origin,
+    stored: null,
+    dev: import.meta.env.DEV,
+    devHost: import.meta.env.VITE_OPENCODE_SERVER_HOST,
+    devPort: import.meta.env.VITE_OPENCODE_SERVER_PORT,
+  })
 }
 
 const getDefaultUrl = () => {
-  const lsDefault = readDefaultServerUrl()
-  if (lsDefault) return lsDefault
-  return getCurrentUrl()
+  return defaultHostedServerUrl({
+    hostname: location.hostname,
+    origin: location.origin,
+    stored: readDefaultServerUrl(),
+    dev: import.meta.env.DEV,
+    devHost: import.meta.env.VITE_OPENCODE_SERVER_HOST,
+    devPort: import.meta.env.VITE_OPENCODE_SERVER_PORT,
+  })
 }
 
 const platform: Platform = {

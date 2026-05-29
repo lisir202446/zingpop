@@ -1,0 +1,13 @@
+[Unit]
+Description=Zingpop production health and certificate check
+Documentation=https://www.zingpop.cn
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=/etc/zingpop/zingpop.env
+ExecStart=/usr/bin/env node /opt/zingpop/bin/production-health-check.mjs --strict
+Nice=5

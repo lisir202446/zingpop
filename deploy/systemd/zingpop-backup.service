@@ -1,0 +1,15 @@
+[Unit]
+Description=Zingpop production backup
+Documentation=https://www.zingpop.cn
+After=network-online.target mysql.service mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=/etc/zingpop/zingpop.env
+ExecStart=/opt/zingpop/bin/production-backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

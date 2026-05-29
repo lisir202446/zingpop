@@ -28,6 +28,10 @@ export const dict = {
   "legal.brand": "Brand",
   "legal.privacy": "Privacy",
   "legal.terms": "Terms",
+  "legal.dataProcessing": "Data",
+  "legal.thirdParty": "Third parties",
+  "legal.accountDeletion": "Account deletion",
+  "legal.openSource": "Open source",
 
   "email.title": "Be the first to know when Zingpop ships something new",
   "email.subtitle": "Join the list and get early access to new beginner-friendly workflows.",

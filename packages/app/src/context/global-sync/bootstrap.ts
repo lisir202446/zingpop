@@ -19,6 +19,7 @@ import type { State, VcsCache } from "./types"
 import { cmp, normalizeAgentList, normalizeProviderList } from "./utils"
 import { formatServerError } from "@/utils/server-errors"
 import { QueryClient, queryOptions, skipToken } from "@tanstack/solid-query"
+import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 
 type GlobalStore = {
   ready: boolean
@@ -103,8 +104,14 @@ export async function bootstrapGlobal(input: {
       ),
     () =>
       retry(() =>
-        input.globalSDK.project.list().then((x) => {
-          const projects = (x.data ?? [])
+        (isZingpopHostedWorkbench()
+          ? fetch("/_zingpop/project", { credentials: "include" }).then(async (response) => {
+              if (!response.ok) throw new Error("Failed to load Zingpop projects")
+              return ((await response.json()) as { projects?: Project[] }).projects ?? []
+            })
+          : input.globalSDK.project.list().then((x) => x.data ?? [])
+        ).then((data) => {
+          const projects = data
             .filter((p) => !!p?.id)
             .filter((p) => !!p.worktree && !p.worktree.includes("opencode-test"))
             .slice()

@@ -8,7 +8,10 @@ export async function GET(input: APIEvent) {
   const fallback = Object.values(session.data.account ?? {})[0]
   const account = current ?? fallback
   if (!account) return Response.json({ authenticated: false }, { status: 401 })
-  const access = await Workbench.resolveAccess({ accountID: account.id })
+  const access = await Workbench.resolveAccess({
+    accountID: account.id,
+    originalURI: input.request.headers.get("x-original-uri") ?? undefined,
+  })
   if (!access) return Response.json({ authenticated: false }, { status: 403 })
   await Workbench.ensureDirectory(access)
   if (

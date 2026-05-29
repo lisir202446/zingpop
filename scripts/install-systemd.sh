@@ -55,6 +55,7 @@ install -d /opt/zingpop
 install -d /opt/zingpop/bin
 install -d -o zingpop -g zingpop /opt/zingpop/app
 install -d -o zingpop -g zingpop /opt/zingpop/console
+install -d -m 700 -o root -g root /srv/zingpop/backups
 
 if [[ -x "$ROOT_DIR/packages/opencode/dist/opencode-linux-x64/bin/opencode" ]]; then
   install -m 755 "$ROOT_DIR/packages/opencode/dist/opencode-linux-x64/bin/opencode" /opt/zingpop/bin/opencode
@@ -108,10 +109,19 @@ fi
 
 install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-opencode.service" /etc/systemd/system/zingpop-opencode.service
 install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-console.service" /etc/systemd/system/zingpop-console.service
+install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-backup.service" /etc/systemd/system/zingpop-backup.service
+install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-backup.timer" /etc/systemd/system/zingpop-backup.timer
+install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-health-check.service" /etc/systemd/system/zingpop-health-check.service
+install -m 644 "$ROOT_DIR/deploy/systemd/zingpop-health-check.timer" /etc/systemd/system/zingpop-health-check.timer
+install -m 755 "$ROOT_DIR/scripts/production-backup.sh" /opt/zingpop/bin/production-backup.sh
+install -m 755 "$ROOT_DIR/scripts/production-restore-drill.sh" /opt/zingpop/bin/production-restore-drill.sh
+install -m 755 "$ROOT_DIR/scripts/production-health-check.mjs" /opt/zingpop/bin/production-health-check.mjs
+install -m 755 "$ROOT_DIR/scripts/production-rotate-local-secrets.sh" /opt/zingpop/bin/production-rotate-local-secrets.sh
+install -m 644 "$ROOT_DIR/deploy/logrotate/zingpop" /etc/logrotate.d/zingpop
 systemctl daemon-reload
 
 echo "Installed zingpop-opencode.service and zingpop-console.service."
 echo "Next:"
 echo "  1. Edit $ENV_FILE"
 echo "  2. Confirm /opt/zingpop/bin/opencode and /opt/zingpop/console/.output exist"
-echo "  3. Run: systemctl enable --now zingpop-opencode zingpop-console"
+echo "  3. Run: systemctl enable --now zingpop-opencode zingpop-console zingpop-backup.timer zingpop-health-check.timer"

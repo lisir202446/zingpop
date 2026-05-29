@@ -3,8 +3,9 @@ import { type Accessor, batch, createEffect, createMemo, onCleanup } from "solid
 import { createStore } from "solid-js/store"
 import { Persist, persisted } from "@/utils/persist"
 import { useCheckServerHealth } from "@/utils/server-health"
+import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 
-type StoredProject = { worktree: string; expanded: boolean }
+type StoredProject = { worktree: string; expanded: boolean; id?: string; name?: string }
 type StoredServer = string | ServerConnection.HttpBase | ServerConnection.Http
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
@@ -92,6 +93,11 @@ export namespace ServerConnection {
   export const Key = { make: (v: string) => v as Key }
 }
 
+export function serverPersistTarget(hosted = isZingpopHostedWorkbench()) {
+  if (hosted) return Persist.global("server.zingpop")
+  return Persist.global("server", ["server.v3"])
+}
+
 export const { use: useServer, provider: ServerProvider } = createSimpleContext({
   name: "Server",
   init: (props: {
@@ -102,7 +108,7 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
     const checkServerHealth = useCheckServerHealth()
 
     const [store, setStore, _, ready] = persisted(
-      Persist.global("server", ["server.v3"]),
+      serverPersistTarget(),
       createStore({
         list: [] as StoredServer[],
         projects: {} as Record<string, StoredProject[]>,
@@ -245,12 +251,13 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
       remove,
       projects: {
         list: projectsList,
-        open(directory: string) {
+        open(input: string | { worktree: string; id?: string; name?: string }) {
           const key = origin()
           if (!key) return
+          const project = typeof input === "string" ? { worktree: input } : input
           const current = store.projects[key] ?? []
-          if (current.find((x) => x.worktree === directory)) return
-          setStore("projects", key, [{ worktree: directory, expanded: true }, ...current])
+          if (current.find((x) => x.worktree === project.worktree)) return
+          setStore("projects", key, [{ ...project, expanded: true }, ...current])
         },
         close(directory: string) {
           const key = origin()

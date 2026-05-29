@@ -6,20 +6,19 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 export NODE_ENV=production
+OPENCODE_BUILD_ARGS=(--single)
 
 if [[ "${ZINGPOP_SKIP_BUN_INSTALL:-0}" == "1" ]]; then
-  if [[ ! -d node_modules ]]; then
-    echo "ZINGPOP_SKIP_BUN_INSTALL=1 was set, but node_modules is missing." >&2
-    exit 1
-  fi
   echo "Using existing node_modules; ZINGPOP_SKIP_BUN_INSTALL=1."
+  scripts/production-bun-install.sh --verify-only
+  OPENCODE_BUILD_ARGS+=(--skip-install)
 else
-  bun install --frozen-lockfile
+  scripts/production-bun-install.sh
 fi
 
 # Existing opencode build embeds packages/app into the server binary. This keeps
 # the workbench and backend on one origin in production.
-bun run --cwd packages/opencode build --single
+bun run --cwd packages/opencode build "${OPENCODE_BUILD_ARGS[@]}"
 
 # Product home build is separate from the opencode workbench.
 rm -rf \

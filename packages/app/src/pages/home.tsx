@@ -13,6 +13,10 @@ import { DialogSelectServer } from "@/components/dialog-select-server"
 import { useServer } from "@/context/server"
 import { useGlobalSync } from "@/context/global-sync"
 import { useLanguage } from "@/context/language"
+import { DialogZingpopProject } from "@/components/dialog-zingpop-project"
+import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
+import { getFilename } from "@opencode-ai/shared/util/path"
+import type { ZingpopProject } from "@/utils/local-folder-sync"
 
 export default function Home() {
   const sync = useGlobalSync()
@@ -37,14 +41,15 @@ export default function Home() {
     return "bg-border-weak-base"
   })
 
-  function openProject(directory: string) {
-    layout.projects.open(directory)
+  function openProject(input: string | ZingpopProject) {
+    const directory = typeof input === "string" ? input : input.worktree
+    layout.projects.open(input)
     server.projects.touch(directory)
     navigate(`/${base64Encode(directory)}`)
   }
 
   async function chooseProject() {
-    function resolve(result: string | string[] | null) {
+    function resolve(result: string | string[] | ZingpopProject | null) {
       if (Array.isArray(result)) {
         for (const directory of result) {
           openProject(directory)
@@ -52,6 +57,14 @@ export default function Home() {
       } else if (result) {
         openProject(result)
       }
+    }
+
+    if (isZingpopHostedWorkbench()) {
+      dialog.show(
+        () => <DialogZingpopProject onSelect={resolve} />,
+        () => resolve(null),
+      )
+      return
     }
 
     if (platform.openDirectoryPickerDialog && server.isLocal()) {
@@ -103,7 +116,7 @@ export default function Home() {
                     class="text-14-mono text-left justify-between px-3"
                     onClick={() => openProject(project.worktree)}
                   >
-                    {project.worktree.replace(homedir(), "~")}
+                    {isZingpopHostedWorkbench() ? project.name || getFilename(project.worktree) : project.worktree.replace(homedir(), "~")}
                     <div class="text-14-regular text-text-weak">
                       {DateTime.fromMillis(project.time.updated ?? project.time.created).toRelative()}
                     </div>
