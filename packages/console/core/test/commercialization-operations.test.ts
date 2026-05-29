@@ -89,4 +89,10 @@ describe("commercialization operations artifacts", () => {
     expect(audit).toContain("@openauthjs/openauth")
     expect(audit).toContain("@solidjs/start")
   })
+
+  test("database backups work with least-privilege MySQL users", async () => {
+    const backup = await Bun.file(new URL("scripts/production-backup.sh", root)).text()
+
+    expect(backup).toContain("--no-tablespaces")
+  })
 })

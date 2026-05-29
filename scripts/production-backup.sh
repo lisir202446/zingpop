@@ -48,6 +48,7 @@ install -d -m 700 "$DEST"
 MYSQL_PWD="$MYSQL_PASSWORD" mysqldump \
   --single-transaction \
   --quick \
+  --no-tablespaces \
   --routines \
   --triggers \
   -h "$MYSQL_HOST" \
