@@ -4,6 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="/etc/zingpop/zingpop.env"
 
+env_value() {
+  local name="$1"
+  (
+    set -a
+    # shellcheck disable=SC1090
+    . "$ENV_FILE"
+    printf "%s" "${!name:-}"
+  )
+}
+
 if [[ "$(id -u)" != "0" ]]; then
   echo "Run as root on the production server." >&2
   exit 1
@@ -100,8 +110,11 @@ fi
 
 install -d /etc/nginx/snippets
 
-if [[ -n "$(sed -n 's/^OPENCODE_SERVER_USERNAME=//p' "$ENV_FILE")" && -n "$(sed -n 's/^OPENCODE_SERVER_PASSWORD=//p' "$ENV_FILE")" ]]; then
-  printf 'proxy_set_header Authorization "Basic %s";\n' "$(printf "%s:%s" "$(sed -n 's/^OPENCODE_SERVER_USERNAME=//p' "$ENV_FILE")" "$(sed -n 's/^OPENCODE_SERVER_PASSWORD=//p' "$ENV_FILE")" | base64 -w 0)" > /etc/nginx/snippets/zingpop-opencode-basic-auth.conf
+OPENCODE_BASIC_USERNAME="$(env_value OPENCODE_SERVER_USERNAME)"
+OPENCODE_BASIC_PASSWORD="$(env_value OPENCODE_SERVER_PASSWORD)"
+
+if [[ -n "$OPENCODE_BASIC_USERNAME" && -n "$OPENCODE_BASIC_PASSWORD" ]]; then
+  printf 'proxy_set_header Authorization "Basic %s";\n' "$(printf "%s:%s" "$OPENCODE_BASIC_USERNAME" "$OPENCODE_BASIC_PASSWORD" | base64 -w 0)" > /etc/nginx/snippets/zingpop-opencode-basic-auth.conf
   chmod 600 /etc/nginx/snippets/zingpop-opencode-basic-auth.conf
 else
   echo "Missing OPENCODE_SERVER_USERNAME or OPENCODE_SERVER_PASSWORD in $ENV_FILE. Nginx app proxy Basic Auth snippet was not updated." >&2
