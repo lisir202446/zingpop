@@ -72,6 +72,7 @@ import {
   errorMessage,
   hostedVisibleSessionDirs,
   latestRootSession,
+  projectSessionPath,
   routeDirectoryNeedsProjectOpen,
   sortedRootSessions,
   workspaceKey,
@@ -1273,7 +1274,7 @@ export default function Layout(props: ParentProps) {
       const project = globalSync.data.project[0]
       if (!project) return
       if (routeDirectoryNeedsProjectOpen(directory, globalSync.data.project)) {
-        navigateWithSidebarReset(`/${base64Encode(project.worktree)}${promptsActive() ? "/prompts" : ""}`)
+        navigateWithSidebarReset(projectSessionPath(project.worktree))
         return
       }
     }

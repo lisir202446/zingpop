@@ -15,6 +15,7 @@ import {
   hasProjectPermissions,
   hostedVisibleSessionDirs,
   latestRootSession,
+  projectSessionPath,
   routeDirectoryNeedsProjectOpen,
   workspaceKey,
 } from "./helpers"
@@ -142,6 +143,12 @@ describe("layout workspace helpers", () => {
       ),
     ).toEqual(["/workspace/wrk_1/projects/default", "/workspace/wrk_1/projects/sandbox"])
     expect(hostedVisibleSessionDirs(["/workspace/default"], [], false)).toEqual([])
+  })
+
+  test("builds the workbench session route for project selection", () => {
+    expect(projectSessionPath("/srv/zingpop/workspaces/default")).toBe(
+      "/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvZGVmYXVsdA/session",
+    )
   })
 
   test("finds the latest root session across workspaces", () => {

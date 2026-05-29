@@ -3,7 +3,6 @@ import { Button } from "@opencode-ai/ui/button"
 import { Logo } from "@opencode-ai/ui/logo"
 import { useLayout } from "@/context/layout"
 import { useNavigate } from "@solidjs/router"
-import { base64Encode } from "@opencode-ai/shared/util/encode"
 import { Icon } from "@opencode-ai/ui/icon"
 import { usePlatform } from "@/context/platform"
 import { DateTime } from "luxon"
@@ -17,6 +16,7 @@ import { DialogZingpopProject } from "@/components/dialog-zingpop-project"
 import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 import { getFilename } from "@opencode-ai/shared/util/path"
 import type { ZingpopProject } from "@/utils/local-folder-sync"
+import { projectSessionPath } from "./layout/helpers"
 
 export default function Home() {
   const sync = useGlobalSync()
@@ -45,7 +45,7 @@ export default function Home() {
     const directory = typeof input === "string" ? input : input.worktree
     layout.projects.open(input)
     server.projects.touch(directory)
-    navigate(`/${base64Encode(directory)}`)
+    navigate(projectSessionPath(directory))
   }
 
   async function chooseProject() {

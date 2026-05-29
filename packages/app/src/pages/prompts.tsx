@@ -5,9 +5,13 @@ import { showToast } from "@opencode-ai/ui/toast"
 import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 import { promptTemplates, type PromptTemplate } from "./prompts/data"
-
-const filterModes = ["All", "Light", "Dark"] as const
-const filterTypes = ["All", "Sans", "Serif", "Mono"] as const
+import {
+  filterModes,
+  filterTypes,
+  promptModeLabel,
+  promptTemplateSummary,
+  promptTypeLabel,
+} from "./prompts/labels"
 const featureCards = [
   ["01", "Prompt to System", "Turn a raw design prompt into tokens, layout rules, and reusable UI decisions."],
   ["02", "Editorial Preview", "Inspect the visual personality before using the prompt in your own workspace."],
@@ -601,7 +605,7 @@ function TemplateCard(props: {
       </span>
       <span class="prompt-template-copy">
         <span>{props.template.name}</span>
-        <small>{props.template.mode}</small>
+        <small>{promptModeLabel(props.template.mode)}</small>
       </span>
       <span class="prompt-template-index">{props.template.index}</span>
     </button>
@@ -4859,27 +4863,35 @@ export default function PromptsPage() {
     const template = selected()
     if (!template) return
     await navigator.clipboard.writeText(template.prompt)
-    showToast({ title: "Prompt copied", description: template.name, icon: "copy" })
+    showToast({ title: "提示词已复制", description: template.name, icon: "copy" })
   }
 
   return (
     <div class="prompt-page">
       <aside class="prompt-sidebar">
         <div class="prompt-sidebar-head">
-          <h1>Prompt Templates</h1>
-          <p>Choose a style, inspect the live example, then copy the original prompt when it fits.</p>
+          <h1>提示词模板</h1>
+          <p>选择一种视觉风格，预览交互示例，合适后复制原始提示词。</p>
         </div>
         <div class="prompt-filters">
           <div>
-            <span>MODE</span>
+            <span>模式</span>
             <For each={filterModes}>
-              {(item) => <FilterButton active={mode() === item} onClick={() => setMode(item)}>{item}</FilterButton>}
+              {(item) => (
+                <FilterButton active={mode() === item} onClick={() => setMode(item)}>
+                  {promptModeLabel(item)}
+                </FilterButton>
+              )}
             </For>
           </div>
           <div>
-            <span>TYPE</span>
+            <span>字体</span>
             <For each={filterTypes}>
-              {(item) => <FilterButton active={type() === item} onClick={() => setType(item)}>{item}</FilterButton>}
+              {(item) => (
+                <FilterButton active={type() === item} onClick={() => setType(item)}>
+                  {promptTypeLabel(item)}
+                </FilterButton>
+              )}
             </For>
           </div>
         </div>
@@ -4900,7 +4912,7 @@ export default function PromptsPage() {
               </For>
             </Match>
             <Match when={true}>
-              <div class="prompt-empty">No templates match these filters.</div>
+              <div class="prompt-empty">没有符合筛选条件的模板。</div>
             </Match>
           </Switch>
         </div>
@@ -4918,21 +4930,21 @@ export default function PromptsPage() {
                   <div>
                     <div class="prompt-title-row">
                       <h2>{template().name}</h2>
-                      <span>{template().mode}</span>
-                      <span>{template().type}</span>
+                      <span>{promptModeLabel(template().mode)}</span>
+                      <span>{promptTypeLabel(template().type)}</span>
                     </div>
-                    <p>{template().summary}</p>
+                    <p>{promptTemplateSummary(template())}</p>
                   </div>
                 </div>
                 <div class="prompt-actions">
                   <Button size="large" variant="ghost" onClick={() => setPreviewOpen(true)}>
-                    Preview
+                    预览
                   </Button>
                   <Button icon="copy" size="large" onClick={copyPrompt}>
-                    Get Prompt
+                    复制提示词
                   </Button>
                   <Button size="large" variant="ghost" onClick={() => setShowPrompt(!showPrompt())}>
-                    {showPrompt() ? "Hide Source" : "View Source"}
+                    {showPrompt() ? "收起源文本" : "查看源文本"}
                   </Button>
                 </div>
               </header>
@@ -4944,7 +4956,7 @@ export default function PromptsPage() {
                       when={!previewOpen()}
                       fallback={
                         <div class="prompt-preview-paused">
-                          <p>Large preview is open.</p>
+                          <p>大预览已打开。</p>
                         </div>
                       }
                     >
@@ -4957,11 +4969,11 @@ export default function PromptsPage() {
                   <section class="prompt-panel prompt-source-panel">
                     <div class="prompt-panel-head">
                       <div>
-                        <h3>Prompt source</h3>
-                        <p>Original English prompt stored for this template.</p>
+                        <h3>提示词源文本</h3>
+                        <p>该模板保存的原始英文提示词。</p>
                       </div>
                       <Button icon="copy" size="normal" onClick={copyPrompt}>
-                        Copy
+                        复制
                       </Button>
                     </div>
                     <pre>{template().prompt}</pre>
@@ -4970,19 +4982,19 @@ export default function PromptsPage() {
               </div>
 
               <Show when={previewOpen()}>
-                <div class="prompt-preview-modal" role="dialog" aria-modal="true" aria-label={`${template().name} preview`}>
+                <div class="prompt-preview-modal" role="dialog" aria-modal="true" aria-label={`${template().name} 预览`}>
                   <div class="prompt-preview-modal-card">
                     <header class="prompt-preview-modal-head">
                       <div>
-                        <h3>{template().name} Preview</h3>
-                        <p>Interactive full-size case generated from this prompt.</p>
+                        <h3>{template().name} 预览</h3>
+                        <p>由该提示词生成的完整交互案例。</p>
                       </div>
                       <div class="prompt-preview-modal-actions">
                         <Button icon="copy" size="normal" onClick={copyPrompt}>
-                          Get Prompt
+                          复制提示词
                         </Button>
                         <Button size="normal" variant="ghost" onClick={() => setPreviewOpen(false)}>
-                          Close
+                          关闭
                         </Button>
                       </div>
                     </header>

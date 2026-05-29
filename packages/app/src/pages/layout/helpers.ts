@@ -1,4 +1,5 @@
 import { getFilename } from "@opencode-ai/shared/util/path"
+import { base64Encode } from "@opencode-ai/shared/util/encode"
 import { type Session } from "@opencode-ai/sdk/v2/client"
 
 type SessionStore = {
@@ -61,6 +62,8 @@ export const childSessionOnPath = (sessions: Session[] | undefined, rootID: stri
 
 export const displayName = (project: { name?: string; worktree: string }) =>
   project.name || getFilename(project.worktree)
+
+export const projectSessionPath = (directory: string) => `/${base64Encode(directory)}/session`
 
 export const routeDirectoryNeedsProjectOpen = (
   directory: string,
