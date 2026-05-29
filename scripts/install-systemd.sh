@@ -105,7 +105,7 @@ if [[ -f "$ROOT_DIR/deploy/opencode/opencode.json" ]]; then
   fi
   install -m 640 -o zingpop -g zingpop "$ROOT_DIR/deploy/opencode/opencode.json" /srv/zingpop/config/opencode/opencode.json
 else
-  echo "Missing deploy/opencode/opencode.json. MyTokenLand provider config was not installed." >&2
+  echo "Missing deploy/opencode/opencode.json. Model provider config was not installed." >&2
 fi
 
 install -d /etc/nginx/snippets
