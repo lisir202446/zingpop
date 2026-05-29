@@ -24,6 +24,10 @@ verify_install() {
   (
     cd packages/app
     bun -e 'console.log(await import.meta.resolve("tailwindcss/theme.css"))'
+  )
+
+  (
+    cd packages/ui
     bun -e 'console.log(await import.meta.resolve("@tsconfig/node22/tsconfig.json"))'
     bun -e 'console.log(await import.meta.resolve("katex/dist/katex.min.css"))'
   )
