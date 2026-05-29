@@ -9,6 +9,14 @@ describe("production bun install", () => {
     expect(build).toContain("scripts/production-bun-install.sh")
   })
 
+  test("skip install mode skips opencode build-time package installs", async () => {
+    const build = await Bun.file(new URL("scripts/production-build.sh", repo)).text()
+
+    expect(build).toContain("OPENCODE_BUILD_ARGS=(--single)")
+    expect(build).toContain('OPENCODE_BUILD_ARGS+=(--skip-install)')
+    expect(build).toContain('bun run --cwd packages/opencode build "${OPENCODE_BUILD_ARGS[@]}"')
+  })
+
   test("installer avoids stale cache tarballs and verifies critical packages", async () => {
     const install = await Bun.file(new URL("scripts/production-bun-install.sh", repo)).text()
 
