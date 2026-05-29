@@ -4,11 +4,13 @@ import { Dialog } from "@opencode-ai/ui/dialog"
 import { TextField } from "@opencode-ai/ui/text-field"
 import { Show } from "solid-js"
 import { createStore } from "solid-js/store"
+import { useGlobalSync } from "@/context/global-sync"
 import {
   createLocalProjectFromDirectory,
   pickLocalDirectory,
   projectApiErrorMessage,
   supportsLocalFolderPicker,
+  upsertZingpopProject,
   type ZingpopProject,
 } from "@/utils/local-folder-sync"
 
@@ -16,6 +18,7 @@ type Mode = "choices" | "git" | "empty"
 
 export function DialogZingpopProject(props: { onSelect: (project: ZingpopProject | null) => void }) {
   const dialog = useDialog()
+  const globalSync = useGlobalSync()
   const [store, setStore] = createStore({
     mode: "choices" as Mode,
     busy: false,
@@ -37,11 +40,13 @@ export function DialogZingpopProject(props: { onSelect: (project: ZingpopProject
     throw new Error(projectApiErrorMessage(response.status, (await response.json().catch(() => undefined)) as { error?: string } | undefined))
   }
 
-  async function run(action: () => Promise<ZingpopProject>) {
+  async function run(action: () => Promise<ZingpopProject>, progress = "") {
     if (store.busy) return
-    setStore({ busy: true, error: "", progress: "" })
+    setStore({ busy: true, error: "", progress })
     try {
-      props.onSelect(await action())
+      const project = await action()
+      globalSync.set("project", (projects) => upsertZingpopProject(projects, project))
+      props.onSelect(project)
       dialog.close()
     } catch (error) {
       setStore("error", error instanceof Error ? error.message : String(error))
@@ -67,13 +72,13 @@ export function DialogZingpopProject(props: { onSelect: (project: ZingpopProject
         branch: store.gitBranch.trim() || undefined,
       })
       return project
-    })
+    }, "正在导入 Git 仓库...")
 
   const createEmpty = () =>
     run(async () => {
       const project = await requestProject("/empty", { name: store.emptyName.trim() || undefined })
       return project
-    })
+    }, "正在创建项目...")
 
   return (
     <Dialog title="打开项目" class="w-full max-w-[560px] mx-auto">
@@ -116,7 +121,7 @@ export function DialogZingpopProject(props: { onSelect: (project: ZingpopProject
                 返回
               </Button>
               <Button variant="primary" size="large" disabled={store.busy || !store.gitUrl.trim()} onClick={importGit}>
-                导入
+                {store.busy ? "正在导入..." : "导入"}
               </Button>
             </div>
           </div>
@@ -138,7 +143,7 @@ export function DialogZingpopProject(props: { onSelect: (project: ZingpopProject
                 返回
               </Button>
               <Button variant="primary" size="large" disabled={store.busy} onClick={createEmpty}>
-                创建
+                {store.busy ? "正在创建..." : "创建"}
               </Button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { isUploadCandidate, projectApiErrorMessage, resolveSyncAction, sha256Hex } from "./local-folder-sync"
+import { isUploadCandidate, projectApiErrorMessage, resolveSyncAction, sha256Hex, upsertZingpopProject } from "./local-folder-sync"
 
 describe("local folder sync helpers", () => {
   test("filters files that should not be uploaded", () => {
@@ -44,5 +44,23 @@ describe("local folder sync helpers", () => {
 
   test("explains missing project API in local frontend-only runs", () => {
     expect(projectApiErrorMessage(404)).toContain("/_zingpop/project")
+  })
+
+  test("upserts newly created hosted projects by id and worktree", () => {
+    const first = {
+      id: "prj_1",
+      worktree: "/srv/zingpop/workspaces/wrk/projects/default",
+      sandboxes: [],
+      time: { created: 1, updated: 1 },
+    }
+    const renamed = { ...first, worktree: `${first.worktree}/`, name: "renamed", time: { created: 1, updated: 2 } }
+    const second = {
+      id: "prj_2",
+      worktree: "/srv/zingpop/workspaces/wrk/projects/second",
+      sandboxes: [],
+      time: { created: 2, updated: 2 },
+    }
+
+    expect(upsertZingpopProject([first, second], renamed)).toEqual([renamed, second])
   })
 })

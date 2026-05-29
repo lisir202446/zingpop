@@ -51,6 +51,15 @@ const excludedDirectories = new Set([".git", "node_modules", "dist", "build", ".
 const DB_NAME = "zingpop-local-folder-sync"
 const STORE_NAME = "projects"
 
+function projectKey(value: string) {
+  return value.replaceAll("\\", "/").replace(/\/+$/, "")
+}
+
+export function upsertZingpopProject<T extends { id: string; worktree: string }>(projects: T[], project: T) {
+  const key = projectKey(project.worktree)
+  return [project, ...projects.filter((item) => item.id !== project.id && projectKey(item.worktree) !== key)]
+}
+
 export function supportsLocalFolderPicker() {
   if (typeof window === "undefined") return false
   return typeof (window as unknown as { showDirectoryPicker?: DirectoryPicker }).showDirectoryPicker === "function"
