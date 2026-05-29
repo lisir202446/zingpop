@@ -13,6 +13,7 @@ import {
   effectiveWorkspaceOrder,
   errorMessage,
   hasProjectPermissions,
+  hostedVisibleSessionDirs,
   latestRootSession,
   routeDirectoryNeedsProjectOpen,
   workspaceKey,
@@ -130,6 +131,17 @@ describe("layout workspace helpers", () => {
         { worktree: "/workspace/default", sandboxes: ["/workspace/sandbox"] },
       ]),
     ).toBe(false)
+  })
+
+  test("filters hosted session dirs to account-owned projects after project load", () => {
+    expect(
+      hostedVisibleSessionDirs(
+        ["/workspace/default", "/workspace/wrk_1/projects/default", "/workspace/wrk_1/projects/sandbox"],
+        [{ worktree: "/workspace/wrk_1/projects/default", sandboxes: ["/workspace/wrk_1/projects/sandbox"] }],
+        true,
+      ),
+    ).toEqual(["/workspace/wrk_1/projects/default", "/workspace/wrk_1/projects/sandbox"])
+    expect(hostedVisibleSessionDirs(["/workspace/default"], [], false)).toEqual([])
   })
 
   test("finds the latest root session across workspaces", () => {

@@ -70,6 +70,7 @@ import {
   displayName,
   effectiveWorkspaceOrder,
   errorMessage,
+  hostedVisibleSessionDirs,
   latestRootSession,
   routeDirectoryNeedsProjectOpen,
   sortedRootSessions,
@@ -1261,6 +1262,15 @@ export default function Layout(props: ParentProps) {
     if (!pageReady()) return
     if (!layoutReady()) return
     const directory = currentDir()
+    if (isZingpopHostedWorkbench()) {
+      if (!globalSync.ready) return
+      const project = globalSync.data.project[0]
+      if (!project) return
+      if (routeDirectoryNeedsProjectOpen(directory, globalSync.data.project)) {
+        navigateWithSidebarReset(`/${base64Encode(project.worktree)}${promptsActive() ? "/prompts" : ""}`)
+        return
+      }
+    }
     if (!routeDirectoryNeedsProjectOpen(directory, layout.projects.list())) return
     layout.projects.open(projectRoot(directory))
   })
@@ -1894,12 +1904,15 @@ export default function Layout(props: ParentProps) {
     on(
       visibleSessionDirs,
       (dirs) => {
-        if (dirs.length === 0) {
+        const visible = isZingpopHostedWorkbench()
+          ? hostedVisibleSessionDirs(dirs, globalSync.data.project, globalSync.ready)
+          : dirs
+        if (visible.length === 0) {
           loadedSessionDirs.clear()
           return
         }
 
-        const next = new Set(dirs)
+        const next = new Set(visible)
         for (const directory of next) {
           if (loadedSessionDirs.has(directory)) continue
           void globalSync.project.loadSessions(directory)

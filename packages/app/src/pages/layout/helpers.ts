@@ -74,6 +74,15 @@ export const routeDirectoryNeedsProjectOpen = (
   )
 }
 
+export const hostedVisibleSessionDirs = (
+  directories: string[],
+  projects: Array<{ worktree: string; sandboxes?: string[] }>,
+  ready: boolean,
+) => {
+  if (!ready || projects.length === 0) return []
+  return directories.filter((directory) => !routeDirectoryNeedsProjectOpen(directory, projects))
+}
+
 export const errorMessage = (err: unknown, fallback: string) => {
   if (err && typeof err === "object" && "data" in err) {
     const data = (err as { data?: { message?: string } }).data
