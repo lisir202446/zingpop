@@ -88,6 +88,15 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "Created $ENV_FILE. Edit it before starting services."
 fi
 
+if [[ -f "$ROOT_DIR/deploy/opencode/opencode.json" ]]; then
+  if [[ -f /srv/zingpop/config/opencode/opencode.json ]] && ! cmp -s "$ROOT_DIR/deploy/opencode/opencode.json" /srv/zingpop/config/opencode/opencode.json; then
+    cp -a /srv/zingpop/config/opencode/opencode.json "/srv/zingpop/config/opencode/opencode.json.bak.$(date +%Y%m%d%H%M%S)"
+  fi
+  install -m 640 -o zingpop -g zingpop "$ROOT_DIR/deploy/opencode/opencode.json" /srv/zingpop/config/opencode/opencode.json
+else
+  echo "Missing deploy/opencode/opencode.json. MyTokenLand provider config was not installed." >&2
+fi
+
 install -d /etc/nginx/snippets
 
 if [[ -n "$(sed -n 's/^OPENCODE_SERVER_USERNAME=//p' "$ENV_FILE")" && -n "$(sed -n 's/^OPENCODE_SERVER_PASSWORD=//p' "$ENV_FILE")" ]]; then
