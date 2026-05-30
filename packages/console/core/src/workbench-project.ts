@@ -88,6 +88,27 @@ export namespace WorkbenchProject {
     return true
   }
 
+  export function previewContentType(input: { path: string }) {
+    const ext = path.extname(safeRelativePath(input.path)).toLowerCase()
+    if (ext === ".html" || ext === ".htm") return "text/html; charset=utf-8"
+    if (ext === ".css") return "text/css; charset=utf-8"
+    if (ext === ".js" || ext === ".mjs") return "text/javascript; charset=utf-8"
+    if (ext === ".json" || ext === ".map") return "application/json; charset=utf-8"
+    if (ext === ".svg") return "image/svg+xml; charset=utf-8"
+    if (ext === ".txt") return "text/plain; charset=utf-8"
+    if (ext === ".png") return "image/png"
+    if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg"
+    if (ext === ".gif") return "image/gif"
+    if (ext === ".webp") return "image/webp"
+    if (ext === ".ico") return "image/x-icon"
+    if (ext === ".wasm") return "application/wasm"
+  }
+
+  export function previewAllowed(input: { path: string; size: number }) {
+    if (!uploadAllowed(input)) return false
+    return Boolean(previewContentType({ path: input.path }))
+  }
+
   export function validateGitImport(input: { url: string; branch?: string }) {
     const url = new URL(input.url)
     if (url.protocol !== "https:") throw new Error("Git import requires HTTPS URLs")
@@ -345,5 +366,12 @@ export namespace WorkbenchProject {
 
   export async function readFile(input: { directory: string; path: string }) {
     return fsReadFile(resolveFile({ directory: input.directory, relative: input.path }))
+  }
+
+  export async function readPreviewFile(input: { directory: string; path: string }) {
+    const target = resolveFile({ directory: input.directory, relative: input.path })
+    const info = await stat(target)
+    if (!previewAllowed({ path: input.path, size: info.size })) throw new Error("File cannot be previewed")
+    return fsReadFile(target)
   }
 }

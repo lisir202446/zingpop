@@ -25,6 +25,8 @@ describe("session.system", () => {
     expect(text).not.toContain("https://zingpop.ai")
     expect(text).not.toContain("https://www.zingpop.cn/feishu")
     expect(text).toContain("https://www.zingpop.cn")
+    expect(text).toContain("browser-runnable HTML/CSS/JavaScript")
+    expect(text).toContain("Zingpop preview panel")
   })
 
   test("skills output is sorted by name and stable across calls", async () => {

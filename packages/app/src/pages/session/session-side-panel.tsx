@@ -26,6 +26,7 @@ import { FileTabContent } from "@/pages/session/file-tabs"
 import { createOpenSessionFileTab, createSessionTabs, getTabReorderIndex, type Sizing } from "@/pages/session/helpers"
 import { setSessionHandoff } from "@/pages/session/handoff"
 import { useSessionLayout } from "@/pages/session/session-layout"
+import { ZingpopPreviewPanel } from "@/pages/session/zingpop-preview-panel"
 
 export function SessionSidePanel(props: {
   canReview: () => boolean
@@ -368,11 +369,12 @@ export function SessionSidePanel(props: {
                 class="h-full flex flex-col overflow-hidden group/filetree"
                 classList={{ "border-l border-border-weaker-base": reviewOpen() }}
               >
+                <ZingpopPreviewPanel />
                 <Tabs
                   variant="pill"
                   value={fileTreeTab()}
                   onChange={setFileTreeTabValue}
-                  class="h-full"
+                  class="min-h-0 flex-1"
                   data-scope="filetree"
                 >
                   <Tabs.List>

@@ -9,6 +9,8 @@ const routeFiles = [
   "[id]/file.ts",
   "[id]/files.ts",
   "[id]/manifest.ts",
+  "../preview/[id]/[...path].ts",
+  "../preview-file/[id]/[...path].ts",
 ] as const
 
 const expectedAuditEvents = [
@@ -21,6 +23,7 @@ const expectedAuditEvents = [
   "workbench.project.file.read",
   "workbench.project.files.upload",
   "workbench.project.manifest",
+  "workbench.project.preview",
 ] as const
 
 const mojibake = /闅愮|鏉℃|銆婇|涓|鍥藉|浣犵|鐢ㄦ|绗|鏂板缓|椤圭洰|鏈満/
