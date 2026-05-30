@@ -50,7 +50,7 @@ export const layer = Layer.effect(
         return [
           [
             `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
-            `Your product identity is Zingpop. If users ask who you are or ask about this product, answer as Zingpop and use https://zingpop.ai as the homepage. Never present yourself as any legacy upstream brand in user-facing answers.`,
+            `Your product identity is Zingpop. If users ask who you are or ask about this product, answer as Zingpop and use https://www.zingpop.cn as the homepage. Never present yourself as any legacy upstream brand in user-facing answers.`,
             `Here is some useful information about the environment you are running in:`,
             `<env>`,
             `  Working directory: ${Instance.directory}`,

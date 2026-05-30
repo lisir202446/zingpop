@@ -5,7 +5,7 @@ async function handler(evt: APIEvent) {
   const req = evt.request.clone()
   const url = new URL(req.url)
   const locale = localeFromRequest(req)
-  const targetUrl = `https://zingpop.ai${docs(locale, `/docs${url.pathname}`)}${url.search}`
+  const targetUrl = `https://www.zingpop.cn${docs(locale, `/docs${url.pathname}`)}${url.search}`
 
   const headers = new Headers(req.headers)
   headers.set("accept-language", tag(locale))

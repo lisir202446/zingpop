@@ -68,7 +68,7 @@ const notify: Platform["notify"] = async (title, description, href) => {
 
   const notification = new Notification(title, {
     body: description ?? "",
-    icon: "https://zingpop.ai/favicon-96x96.png",
+    icon: "https://www.zingpop.cn/favicon-96x96.png",
   })
 
   notification.onclick = () => {

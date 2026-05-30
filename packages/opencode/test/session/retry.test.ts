@@ -27,6 +27,10 @@ function wrap(message: unknown): ReturnType<NamedError["toObject"]> {
 }
 
 describe("session.retry.delay", () => {
+  test("uses the production CN go page in upsell messages", () => {
+    expect(SessionRetry.GO_UPSELL_MESSAGE).toBe("Free usage exceeded, subscribe to Go https://www.zingpop.cn/go")
+  })
+
   test("caps delay at 30 seconds when headers missing", () => {
     const error = apiError()
     const delays = Array.from({ length: 10 }, (_, index) => SessionRetry.delay(index + 1, error))

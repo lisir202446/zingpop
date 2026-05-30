@@ -39,15 +39,19 @@ function workspaceDirectory(workspaceID: string | undefined) {
 function defaultWorkbenchLocation(workspaceID?: string) {
   const origin = appOrigin()
   if (!origin) return
-  return `${origin}/${base64Encode(workspaceDirectory(workspaceID))}/prompts`
+  return `${origin}/${base64Encode(workspaceDirectory(workspaceID))}/session`
 }
 
 function isLocalHttp(url: URL) {
   return url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1")
 }
 
-function isAppRoot(url: URL) {
-  return host(process.env.ZINGPOP_APP_DOMAIN) === url.host && url.pathname === "/" && !url.search && !url.hash
+function appWorkbenchLocation(url: URL, workspaceID?: string) {
+  if (host(process.env.ZINGPOP_APP_DOMAIN) !== url.host) return
+  if (url.pathname === "/" && !url.search && !url.hash) return defaultWorkbenchLocation(workspaceID)
+  const prompts = url.pathname.match(/^\/([A-Za-z0-9_-]+)\/prompts\/?$/)
+  if (!prompts) return
+  return `${url.origin}/${prompts[1]}/session`
 }
 
 function safeRedirectLocation(request: Request, target: string, workspaceID?: string) {
@@ -65,7 +69,8 @@ function safeRedirectLocation(request: Request, target: string, workspaceID?: st
     ),
   )
   if (!allowed.has(url.host)) return
-  if (isAppRoot(url)) return defaultWorkbenchLocation(workspaceID)
+  const workbench = appWorkbenchLocation(url, workspaceID)
+  if (workbench) return workbench
   return url.toString()
 }
 

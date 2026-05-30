@@ -173,6 +173,18 @@ function markCodeLinks(root: HTMLDivElement) {
   }
 }
 
+function zingpopUrl(text: string) {
+  return text
+    .replaceAll("https://zingpop.ai/support", "https://www.zingpop.cn")
+    .replaceAll("http://zingpop.ai/support", "https://www.zingpop.cn")
+    .replaceAll("https://opencode.ai/discord", "https://www.zingpop.cn")
+    .replaceAll("http://opencode.ai/discord", "https://www.zingpop.cn")
+    .replaceAll("https://opencode.ai", "https://www.zingpop.cn")
+    .replaceAll("http://opencode.ai", "https://www.zingpop.cn")
+    .replaceAll("https://zingpop.ai", "https://www.zingpop.cn")
+    .replaceAll("http://zingpop.ai", "https://www.zingpop.cn")
+}
+
 function brandDisplay(root: HTMLDivElement) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -188,20 +200,13 @@ function brandDisplay(root: HTMLDivElement) {
     if (node instanceof Text) nodes.push(node)
   }
   for (const node of nodes) {
-    node.data = node.data
-      .replaceAll("https://opencode.ai", "https://zingpop.ai")
-      .replaceAll("http://opencode.ai", "https://zingpop.ai")
+    node.data = zingpopUrl(node.data)
       .replaceAll("OpenCode", "Zingpop")
       .replace(/(?<![\w-])opencode(?![\w.-])/gi, "Zingpop")
   }
   for (const link of Array.from(root.querySelectorAll("a"))) {
     if (!(link instanceof HTMLAnchorElement)) continue
-    if (link.href.startsWith("https://opencode.ai")) {
-      link.href = link.href.replace("https://opencode.ai", "https://zingpop.ai")
-    }
-    if (link.href.startsWith("http://opencode.ai")) {
-      link.href = link.href.replace("http://opencode.ai", "https://zingpop.ai")
-    }
+    link.href = zingpopUrl(link.href)
   }
 }
 

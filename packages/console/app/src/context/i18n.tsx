@@ -6,9 +6,11 @@ import { useLanguage } from "~/context/language"
 function brandDisplay(text: string) {
   return text
     .replaceAll("OpenCode", "Zingpop")
-    .replaceAll("opencode.ai/discord", "zingpop.ai/support")
-    .replaceAll("https://opencode.ai", "https://zingpop.ai")
-    .replaceAll("http://opencode.ai", "https://zingpop.ai")
+    .replaceAll("opencode.ai/discord", "www.zingpop.cn")
+    .replaceAll("https://opencode.ai", "https://www.zingpop.cn")
+    .replaceAll("http://opencode.ai", "https://www.zingpop.cn")
+    .replaceAll("https://zingpop.ai/support", "https://www.zingpop.cn")
+    .replaceAll("https://zingpop.ai", "https://www.zingpop.cn")
 }
 
 function resolve(text: string, params?: Record<string, string | number>) {

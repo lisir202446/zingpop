@@ -24,17 +24,17 @@ afterEach(() => {
 })
 
 describe("workbench auth redirects", () => {
-  test("defaults production auth success to the embedded workbench prompts page", () => {
+  test("defaults production auth success to the embedded workbench session page", () => {
     process.env.ZINGPOP_APP_DOMAIN = "app.zingpop.cn"
     process.env.ZINGPOP_WORKSPACE_ROOT = "/srv/zingpop/workspaces"
     delete process.env.ZINGPOP_DEFAULT_WORKSPACE_DIR
 
     expect(authSuccessRedirectLocation(new Request("https://www.zingpop.cn/auth/phone"), "", "/workspace/wrk_123/home", "wrk_123")).toBe(
-      "https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvd3JrXzEyMy9wcm9qZWN0cy9kZWZhdWx0/prompts",
+      "https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvd3JrXzEyMy9wcm9qZWN0cy9kZWZhdWx0/session",
     )
   })
 
-  test("allows app host continue targets from the workbench auth gate", () => {
+  test("normalizes prompt library continue targets from the workbench auth gate", () => {
     process.env.ZINGPOP_DOMAIN = "www.zingpop.cn"
     process.env.ZINGPOP_APP_DOMAIN = "app.zingpop.cn"
 
@@ -45,7 +45,21 @@ describe("workbench auth redirects", () => {
         "/workspace/wrk_123/home",
         "wrk_123",
       ),
-    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvZGVmYXVsdA/prompts")
+    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvZGVmYXVsdA/session")
+  })
+
+  test("allows app host session continue targets from the workbench auth gate", () => {
+    process.env.ZINGPOP_DOMAIN = "www.zingpop.cn"
+    process.env.ZINGPOP_APP_DOMAIN = "app.zingpop.cn"
+
+    expect(
+      authSuccessRedirectLocation(
+        new Request("https://www.zingpop.cn/auth/phone"),
+        "https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvZGVmYXVsdA/session",
+        "/workspace/wrk_123/home",
+        "wrk_123",
+      ),
+    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvZGVmYXVsdA/session")
   })
 
   test("normalizes app root continue targets to the account workspace", () => {
@@ -55,7 +69,7 @@ describe("workbench auth redirects", () => {
 
     expect(
       authSuccessRedirectLocation(new Request("https://www.zingpop.cn/auth/phone"), "https://app.zingpop.cn/", "/workspace/wrk_123/home", "wrk_123"),
-    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvd3JrXzEyMy9wcm9qZWN0cy9kZWZhdWx0/prompts")
+    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvd3JrXzEyMy9wcm9qZWN0cy9kZWZhdWx0/session")
   })
 
   test("rejects external continue targets", () => {
@@ -64,7 +78,7 @@ describe("workbench auth redirects", () => {
 
     expect(
       authSuccessRedirectLocation(new Request("https://www.zingpop.cn/auth/phone"), "https://example.com/phish", "/workspace/wrk_123/home", "wrk_123"),
-    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvd3JrXzEyMy9wcm9qZWN0cy9kZWZhdWx0/prompts")
+    ).toBe("https://app.zingpop.cn/L3Nydi96aW5ncG9wL3dvcmtzcGFjZXMvd3JrXzEyMy9wcm9qZWN0cy9kZWZhdWx0/session")
   })
 
   test("keeps the console fallback when no app domain is configured", () => {

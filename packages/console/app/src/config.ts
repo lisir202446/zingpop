@@ -3,11 +3,11 @@
  */
 export const config = {
   // Base URL
-  baseUrl: "https://zingpop.ai",
+  baseUrl: "https://www.zingpop.cn",
 
   // GitHub
   github: {
-    repoUrl: "https://zingpop.ai",
+    repoUrl: "https://www.zingpop.cn",
     starsFormatted: {
       compact: "140K",
       full: "140,000",
@@ -16,8 +16,8 @@ export const config = {
 
   // Social links
   social: {
-    twitter: "https://zingpop.ai",
-    discord: "https://zingpop.ai/support",
+    twitter: "https://www.zingpop.cn",
+    discord: "https://www.zingpop.cn",
   },
 
   // Static stats (used on landing page)

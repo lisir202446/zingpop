@@ -155,13 +155,13 @@ export default function Home() {
 
         <footer data-component="footer">
           <div data-slot="cell">
-            <a href="https://zingpop.ai">{i18n.t("footer.x")}</a>
+            <a href="https://www.zingpop.cn">{i18n.t("footer.x")}</a>
           </div>
           <div data-slot="cell">
-            <a href="https://zingpop.ai">{i18n.t("footer.github")}</a>
+            <a href="https://www.zingpop.cn">{i18n.t("footer.github")}</a>
           </div>
           <div data-slot="cell">
-            <a href="https://zingpop.ai/support">{i18n.t("footer.discord")}</a>
+            <a href="https://www.zingpop.cn">{i18n.t("footer.discord")}</a>
           </div>
         </footer>
       </div>

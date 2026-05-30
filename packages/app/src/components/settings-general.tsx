@@ -385,7 +385,7 @@ export const SettingsGeneral: Component = () => {
           description={
             <>
               {language.t("settings.general.row.theme.description")}{" "}
-              <Link href="https://zingpop.ai/docs/themes/">{language.t("common.learnMore")}</Link>
+              <Link href="https://www.zingpop.cn/docs/themes/">{language.t("common.learnMore")}</Link>
             </>
           }
         >

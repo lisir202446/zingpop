@@ -11,6 +11,22 @@ function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
 }
 
 describe("session.system", () => {
+  test("Zingpop identity prompts use production CN links", async () => {
+    const text = (
+      await Promise.all(
+        [
+          "../../src/session/prompt/default.txt",
+          "../../src/session/prompt/anthropic.txt",
+          "../../src/session/system.ts",
+        ].map((file) => Bun.file(new URL(file, import.meta.url)).text()),
+      )
+    ).join("\n")
+
+    expect(text).not.toContain("https://zingpop.ai")
+    expect(text).not.toContain("https://www.zingpop.cn/feishu")
+    expect(text).toContain("https://www.zingpop.cn")
+  })
+
   test("skills output is sorted by name and stable across calls", async () => {
     await using tmp = await tmpdir({
       git: true,

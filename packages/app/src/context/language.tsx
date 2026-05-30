@@ -100,7 +100,7 @@ function brandDisplay(value: string) {
   return value
     .replaceAll("OpenCode", "Zingpop")
     .replaceAll("Discord", "Zingpop Support")
-    .replaceAll("opencode.ai/zen", "zingpop.ai/zen")
+    .replaceAll("opencode.ai/zen", "www.zingpop.cn/zen")
 }
 
 const merge = (app: Promise<Source>, ui: Promise<Source>) =>

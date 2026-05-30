@@ -300,7 +300,7 @@ export const ErrorPage: Component<ErrorPageProps> = (props) => {
             <button
               type="button"
               class="flex items-center text-text-interactive-base gap-1"
-              onClick={() => platform.openLink("https://zingpop.ai/support")}
+              onClick={() => platform.openLink("https://www.zingpop.cn")}
             >
               <div>Zingpop Support</div>
             </button>
