@@ -1,10 +1,17 @@
 import { Button } from "@opencode-ai/ui/button"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { showToast } from "@opencode-ai/ui/toast"
-import { For, Match, Show, Switch, createEffect, createMemo, createResource, createSignal, onCleanup } from "solid-js"
+import { For, Match, Show, Switch, createEffect, createMemo, createResource, on, onCleanup } from "solid-js"
 import { useSync } from "@/context/sync"
+import { useSessionLayout } from "@/pages/session/session-layout"
 import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
-import { loadZingpopPreviewArtifacts, type PreviewArtifact } from "@/utils/zingpop-preview"
+import {
+  loadZingpopPreviewArtifacts,
+  shouldRefreshPreviewArtifacts,
+  type PreviewArtifact,
+} from "@/utils/zingpop-preview"
+
+const idle = { type: "idle" as const }
 
 function absoluteUrl(url: string) {
   return new URL(url, window.location.origin).toString()
@@ -15,61 +22,123 @@ async function copyArtifact(artifact: PreviewArtifact) {
   showToast({ variant: "success", icon: "circle-check", title: "预览链接已复制" })
 }
 
-export function ZingpopPreviewPanel() {
+function createZingpopPreviewArtifacts() {
   const sync = useSync()
+  const { params } = useSessionLayout()
   const projectID = createMemo(() => (isZingpopHostedWorkbench() ? (sync.project?.id ?? "") : ""))
-  const [refresh, setRefresh] = createSignal(0)
   const [artifacts, { refetch }] = createResource(
     () => {
       const project = projectID()
       if (!project) return
-      return { project, refresh: refresh() }
+      return project
     },
-    (input) => loadZingpopPreviewArtifacts(input.project),
+    (project) => loadZingpopPreviewArtifacts(project),
   )
   const entries = createMemo(() => artifacts()?.artifacts ?? [])
   const first = createMemo(() => entries()[0])
+  const status = createMemo(() => (params.id ? (sync.data.session_status[params.id] ?? idle) : idle))
+  let refreshTimer: number | undefined
 
-  createEffect(() => {
-    if (!projectID()) return
-    const timer = window.setInterval(() => setRefresh((value) => value + 1), 8_000)
-    onCleanup(() => window.clearInterval(timer))
+  createEffect(
+    on(
+      status,
+      (next, previous) => {
+        if (!projectID()) return
+        if (!shouldRefreshPreviewArtifacts(previous, next)) return
+        if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+        refreshTimer = window.setTimeout(() => {
+          refreshTimer = undefined
+          void refetch()
+        }, 350)
+      },
+      { defer: true },
+    ),
+  )
+
+  onCleanup(() => {
+    if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
   })
 
+  return { projectID, artifacts, entries, first, refetch }
+}
+
+export function ZingpopPreviewDock() {
+  const preview = createZingpopPreviewArtifacts()
+
   return (
-    <Show when={projectID()}>
+    <Show when={preview.first()}>
+      {(artifact) => (
+        <div class="mb-2 flex w-full flex-col gap-2 rounded-md border border-border-weak-base bg-background-base px-3 py-2 shadow-sm sm:flex-row sm:items-center">
+          <div class="min-w-0 flex-1">
+            <div class="text-12-medium text-text-strong">已生成 HTML 作品</div>
+            <a
+              href={artifact().url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="block truncate text-12-regular text-text-base hover:text-text-strong"
+            >
+              {artifact().name}
+            </a>
+          </div>
+          <div class="flex shrink-0 gap-2">
+            <Button
+              as="a"
+              href={artifact().url}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+              variant="primary"
+              icon="open-file"
+            >
+              打开预览
+            </Button>
+            <Button size="small" variant="secondary" icon="copy" onClick={() => copyArtifact(artifact())}>
+              复制链接
+            </Button>
+          </div>
+        </div>
+      )}
+    </Show>
+  )
+}
+
+export function ZingpopPreviewPanel() {
+  const preview = createZingpopPreviewArtifacts()
+
+  return (
+    <Show when={preview.projectID()}>
       <section class="border-b border-border-weaker-base bg-background px-3 py-3">
         <div class="mb-2 flex items-center gap-2">
           <div class="min-w-0 flex-1">
             <div class="text-12-medium text-text-strong">作品预览</div>
-            <div class="truncate text-11-regular text-text-weak">HTML 文件会自动出现在这里</div>
+            <div class="truncate text-11-regular text-text-weak">生成完成后会自动出现，也可手动刷新</div>
           </div>
           <IconButton
             icon="reset"
             size="small"
             variant="ghost"
             aria-label="刷新作品预览"
-            onClick={() => refetch()}
+            onClick={() => preview.refetch()}
           />
         </div>
 
         <Switch>
-          <Match when={artifacts()?.error}>
+          <Match when={preview.artifacts()?.error}>
             <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
-              {artifacts()!.error}
+              {preview.artifacts()!.error}
             </div>
           </Match>
-          <Match when={artifacts.loading && !artifacts()}>
+          <Match when={preview.artifacts.loading && !preview.artifacts()}>
             <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
               正在查找 HTML 作品...
             </div>
           </Match>
-          <Match when={entries().length === 0}>
+          <Match when={preview.entries().length === 0}>
             <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
               当前项目还没有 HTML 作品
             </div>
           </Match>
-          <Match when={first()}>
+          <Match when={preview.first()}>
             {(artifact) => (
               <div class="flex flex-col gap-2">
                 <a
@@ -104,9 +173,9 @@ export function ZingpopPreviewPanel() {
                     复制链接
                   </Button>
                 </div>
-                <Show when={entries().length > 1}>
+                <Show when={preview.entries().length > 1}>
                   <div class="max-h-24 overflow-y-auto border-t border-border-weaker-base pt-2">
-                    <For each={entries().slice(1)}>
+                    <For each={preview.entries().slice(1)}>
                       {(item) => (
                         <a
                           href={item.url}

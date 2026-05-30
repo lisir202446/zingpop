@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { loadZingpopPreviewArtifacts, previewArtifacts, zingpopPreviewFileUrl, zingpopPreviewUrl } from "./zingpop-preview"
+import {
+  loadZingpopPreviewArtifacts,
+  previewArtifacts,
+  shouldRefreshPreviewArtifacts,
+  zingpopPreviewFileUrl,
+  zingpopPreviewUrl,
+} from "./zingpop-preview"
 
 describe("zingpop preview utilities", () => {
   test("builds encoded preview URLs", () => {
@@ -37,5 +43,13 @@ describe("zingpop preview utilities", () => {
     } finally {
       globalThis.fetch = originalFetch
     }
+  })
+
+  test("refreshes only when a running session becomes idle", () => {
+    expect(shouldRefreshPreviewArtifacts({ type: "busy" }, { type: "idle" })).toBe(true)
+    expect(shouldRefreshPreviewArtifacts({ type: "retry", attempt: 1, message: "try again", next: 2 }, { type: "idle" })).toBe(true)
+    expect(shouldRefreshPreviewArtifacts({ type: "idle" }, { type: "idle" })).toBe(false)
+    expect(shouldRefreshPreviewArtifacts(undefined, { type: "idle" })).toBe(false)
+    expect(shouldRefreshPreviewArtifacts({ type: "busy" }, { type: "busy" })).toBe(false)
   })
 })

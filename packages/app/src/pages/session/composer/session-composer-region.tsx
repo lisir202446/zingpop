@@ -16,6 +16,7 @@ import type { SessionComposerState } from "@/pages/session/composer/session-comp
 import { SessionTodoDock } from "@/pages/session/composer/session-todo-dock"
 import type { FollowupDraft } from "@/components/prompt-input/submit"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
+import { ZingpopPreviewDock } from "@/pages/session/zingpop-preview-panel"
 
 export function SessionComposerRegion(props: {
   state: SessionComposerState
@@ -238,6 +239,7 @@ export function SessionComposerRegion(props: {
                 "margin-top": `${-lift()}px`,
               }}
             >
+              <ZingpopPreviewDock />
               <Show when={props.followup?.items.length}>
                 <SessionFollowupDock
                   items={props.followup!.items}

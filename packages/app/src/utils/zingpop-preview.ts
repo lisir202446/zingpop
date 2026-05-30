@@ -8,6 +8,15 @@ export type PreviewArtifact = {
   timeUpdated: number
 }
 
+type PreviewRefreshStatus = { type: "idle" | "busy" } | { type: "retry"; attempt: number; message: string; next: number }
+
+export function shouldRefreshPreviewArtifacts(
+  previous: PreviewRefreshStatus | undefined,
+  next: PreviewRefreshStatus | undefined,
+) {
+  return previous !== undefined && previous.type !== "idle" && next?.type === "idle"
+}
+
 export function isZingpopPreviewArtifact(path: string) {
   return /\.(html|htm)$/i.test(path)
 }
