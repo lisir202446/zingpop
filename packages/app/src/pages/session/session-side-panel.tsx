@@ -303,6 +303,8 @@ export function SessionSidePanel(props: {
                     </Tabs.List>
                   </div>
 
+                  <ZingpopPreviewPanel />
+
                   <Show when={reviewTab() && props.canReview()}>
                     <Tabs.Content value="review" class="flex flex-col h-full overflow-hidden contain-strict">
                       <Show when={activeTab() === "review"}>{props.reviewPanel()}</Show>
@@ -369,7 +371,6 @@ export function SessionSidePanel(props: {
                 class="h-full flex flex-col overflow-hidden group/filetree"
                 classList={{ "border-l border-border-weaker-base": reviewOpen() }}
               >
-                <ZingpopPreviewPanel />
                 <Tabs
                   variant="pill"
                   value={fileTreeTab()}

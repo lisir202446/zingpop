@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { previewArtifacts, zingpopPreviewFileUrl, zingpopPreviewUrl } from "./zingpop-preview"
+import { loadZingpopPreviewArtifacts, previewArtifacts, zingpopPreviewFileUrl, zingpopPreviewUrl } from "./zingpop-preview"
 
 describe("zingpop preview utilities", () => {
   test("builds encoded preview URLs", () => {
@@ -20,5 +20,22 @@ describe("zingpop preview utilities", () => {
         { path: "game.htm", size: 1, sha256: "d", timeUpdated: 4 },
       ]).map((item) => item.path),
     ).toEqual(["index.html", "game.htm", "about.html"])
+  })
+
+  test("loads manifest failures as panel state instead of throwing", async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = Object.assign(
+      (() => Promise.resolve(new Response("missing", { status: 404 }))) as unknown as typeof fetch,
+      { preconnect: originalFetch.preconnect },
+    )
+
+    try {
+      await expect(loadZingpopPreviewArtifacts("missing")).resolves.toEqual({
+        artifacts: [],
+        error: "无法加载作品列表",
+      })
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 })

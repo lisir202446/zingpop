@@ -4,14 +4,10 @@ import { showToast } from "@opencode-ai/ui/toast"
 import { For, Match, Show, Switch, createEffect, createMemo, createResource, createSignal, onCleanup } from "solid-js"
 import { useSync } from "@/context/sync"
 import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
-import { listZingpopPreviewArtifacts, type PreviewArtifact } from "@/utils/zingpop-preview"
+import { loadZingpopPreviewArtifacts, type PreviewArtifact } from "@/utils/zingpop-preview"
 
 function absoluteUrl(url: string) {
   return new URL(url, window.location.origin).toString()
-}
-
-function openArtifact(artifact: PreviewArtifact) {
-  window.open(artifact.url, "_blank", "noopener,noreferrer")
 }
 
 async function copyArtifact(artifact: PreviewArtifact) {
@@ -21,7 +17,7 @@ async function copyArtifact(artifact: PreviewArtifact) {
 
 export function ZingpopPreviewPanel() {
   const sync = useSync()
-  const projectID = createMemo(() => (isZingpopHostedWorkbench() ? sync.data.project : ""))
+  const projectID = createMemo(() => (isZingpopHostedWorkbench() ? (sync.project?.id ?? "") : ""))
   const [refresh, setRefresh] = createSignal(0)
   const [artifacts, { refetch }] = createResource(
     () => {
@@ -29,9 +25,10 @@ export function ZingpopPreviewPanel() {
       if (!project) return
       return { project, refresh: refresh() }
     },
-    (input) => listZingpopPreviewArtifacts(input.project),
+    (input) => loadZingpopPreviewArtifacts(input.project),
   )
-  const first = createMemo(() => artifacts()?.[0])
+  const entries = createMemo(() => artifacts()?.artifacts ?? [])
+  const first = createMemo(() => entries()[0])
 
   createEffect(() => {
     if (!projectID()) return
@@ -57,9 +54,9 @@ export function ZingpopPreviewPanel() {
         </div>
 
         <Switch>
-          <Match when={artifacts.error}>
+          <Match when={artifacts()?.error}>
             <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
-              无法加载作品列表
+              {artifacts()!.error}
             </div>
           </Match>
           <Match when={artifacts.loading && !artifacts()}>
@@ -67,7 +64,7 @@ export function ZingpopPreviewPanel() {
               正在查找 HTML 作品...
             </div>
           </Match>
-          <Match when={(artifacts()?.length ?? 0) === 0}>
+          <Match when={entries().length === 0}>
             <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
               当前项目还没有 HTML 作品
             </div>
@@ -75,11 +72,12 @@ export function ZingpopPreviewPanel() {
           <Match when={first()}>
             {(artifact) => (
               <div class="flex flex-col gap-2">
-                <button
-                  type="button"
+                <a
+                  href={artifact().url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={`打开预览 ${artifact().path}`}
-                  class="h-32 overflow-hidden rounded-md border border-border-base bg-background-stronger text-left"
-                  onClick={() => openArtifact(artifact())}
+                  class="block h-32 w-full overflow-hidden rounded-md border border-border-base bg-background-stronger text-left"
                 >
                   <iframe
                     title={artifact().path}
@@ -87,28 +85,38 @@ export function ZingpopPreviewPanel() {
                     sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"
                     class="pointer-events-none h-full w-full border-0 bg-white"
                   />
-                </button>
+                </a>
                 <div class="min-w-0 truncate text-12-medium text-text-strong">{artifact().name}</div>
                 <div class="flex gap-2">
-                  <Button size="small" variant="primary" icon="open-file" class="flex-1" onClick={() => openArtifact(artifact())}>
+                  <Button
+                    as="a"
+                    href={artifact().url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="small"
+                    variant="primary"
+                    icon="open-file"
+                    class="flex-1"
+                  >
                     打开预览
                   </Button>
                   <Button size="small" variant="secondary" icon="copy" class="flex-1" onClick={() => copyArtifact(artifact())}>
                     复制链接
                   </Button>
                 </div>
-                <Show when={(artifacts()?.length ?? 0) > 1}>
+                <Show when={entries().length > 1}>
                   <div class="max-h-24 overflow-y-auto border-t border-border-weaker-base pt-2">
-                    <For each={artifacts()!.slice(1)}>
+                    <For each={entries().slice(1)}>
                       {(item) => (
-                        <button
-                          type="button"
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           class="flex h-7 w-full items-center gap-2 rounded px-1 text-left text-12-regular text-text-muted hover:bg-background-stronger"
-                          onClick={() => openArtifact(item)}
                         >
                           <span class="min-w-0 flex-1 truncate">{item.path}</span>
                           <span class="text-text-weak">打开</span>
-                        </button>
+                        </a>
                       )}
                     </For>
                   </div>

@@ -54,3 +54,9 @@ export async function listZingpopPreviewArtifacts(projectID: string) {
   const body = (await response.json()) as { files?: ManifestEntry[] }
   return previewArtifacts(projectID, body.files ?? [])
 }
+
+export async function loadZingpopPreviewArtifacts(projectID: string) {
+  return listZingpopPreviewArtifacts(projectID)
+    .then((artifacts) => ({ artifacts, error: "" }))
+    .catch(() => ({ artifacts: [] as PreviewArtifact[], error: "无法加载作品列表" }))
+}
