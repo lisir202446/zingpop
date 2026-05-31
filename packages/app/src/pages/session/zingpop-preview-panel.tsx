@@ -1,26 +1,16 @@
 import { Button } from "@opencode-ai/ui/button"
 import { IconButton } from "@opencode-ai/ui/icon-button"
-import { showToast } from "@opencode-ai/ui/toast"
 import { For, Match, Show, Switch, createEffect, createMemo, createResource, on, onCleanup } from "solid-js"
 import { useSync } from "@/context/sync"
 import { useSessionLayout } from "@/pages/session/session-layout"
+import { copyPreviewArtifact, ZingpopPreviewBrowserCard } from "@/pages/session/zingpop-preview-browser-card"
 import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 import {
   loadZingpopPreviewArtifacts,
   shouldRefreshPreviewArtifacts,
-  type PreviewArtifact,
 } from "@/utils/zingpop-preview"
 
 const idle = { type: "idle" as const }
-
-function absoluteUrl(url: string) {
-  return new URL(url, window.location.origin).toString()
-}
-
-async function copyArtifact(artifact: PreviewArtifact) {
-  await navigator.clipboard.writeText(absoluteUrl(artifact.url))
-  showToast({ variant: "success", icon: "circle-check", title: "预览链接已复制" })
-}
 
 function createZingpopPreviewArtifacts() {
   const sync = useSync()
@@ -62,6 +52,16 @@ function createZingpopPreviewArtifacts() {
   return { projectID, artifacts, entries, first, refetch }
 }
 
+export function ZingpopPreviewInline() {
+  const preview = createZingpopPreviewArtifacts()
+
+  return (
+    <Show when={preview.first()}>
+      {(artifact) => <ZingpopPreviewBrowserCard artifact={artifact()} />}
+    </Show>
+  )
+}
+
 export function ZingpopPreviewDock() {
   const preview = createZingpopPreviewArtifacts()
 
@@ -92,7 +92,7 @@ export function ZingpopPreviewDock() {
             >
               打开预览
             </Button>
-            <Button size="small" variant="secondary" icon="copy" onClick={() => copyArtifact(artifact())}>
+            <Button size="small" variant="secondary" icon="copy" onClick={() => copyPreviewArtifact(artifact())}>
               复制链接
             </Button>
           </div>
@@ -113,13 +113,7 @@ export function ZingpopPreviewPanel() {
             <div class="text-12-medium text-text-strong">作品预览</div>
             <div class="truncate text-11-regular text-text-weak">生成完成后会自动出现，也可手动刷新</div>
           </div>
-          <IconButton
-            icon="reset"
-            size="small"
-            variant="ghost"
-            aria-label="刷新作品预览"
-            onClick={() => preview.refetch()}
-          />
+          <IconButton icon="reset" size="small" variant="ghost" aria-label="刷新作品预览" onClick={() => preview.refetch()} />
         </div>
 
         <Switch>
@@ -129,14 +123,10 @@ export function ZingpopPreviewPanel() {
             </div>
           </Match>
           <Match when={preview.artifacts.loading && !preview.artifacts()}>
-            <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
-              正在查找 HTML 作品...
-            </div>
+            <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">正在查找 HTML 作品...</div>
           </Match>
           <Match when={preview.entries().length === 0}>
-            <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">
-              当前项目还没有 HTML 作品
-            </div>
+            <div class="rounded-md border border-border-base px-2 py-2 text-12-regular text-text-weak">当前项目还没有 HTML 作品</div>
           </Match>
           <Match when={preview.first()}>
             {(artifact) => (
@@ -169,7 +159,13 @@ export function ZingpopPreviewPanel() {
                   >
                     打开预览
                   </Button>
-                  <Button size="small" variant="secondary" icon="copy" class="flex-1" onClick={() => copyArtifact(artifact())}>
+                  <Button
+                    size="small"
+                    variant="secondary"
+                    icon="copy"
+                    class="flex-1"
+                    onClick={() => copyPreviewArtifact(artifact())}
+                  >
                     复制链接
                   </Button>
                 </div>

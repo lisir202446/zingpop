@@ -173,16 +173,20 @@ function markCodeLinks(root: HTMLDivElement) {
   }
 }
 
-function zingpopUrl(text: string) {
+export function zingpopUrl(text: string) {
   return text
     .replaceAll("https://zingpop.ai/support", "https://www.zingpop.cn")
     .replaceAll("http://zingpop.ai/support", "https://www.zingpop.cn")
+    .replaceAll("zingpop.ai/support", "www.zingpop.cn")
     .replaceAll("https://opencode.ai/discord", "https://www.zingpop.cn")
     .replaceAll("http://opencode.ai/discord", "https://www.zingpop.cn")
+    .replaceAll("opencode.ai/discord", "www.zingpop.cn")
     .replaceAll("https://opencode.ai", "https://www.zingpop.cn")
     .replaceAll("http://opencode.ai", "https://www.zingpop.cn")
+    .replaceAll("opencode.ai", "www.zingpop.cn")
     .replaceAll("https://zingpop.ai", "https://www.zingpop.cn")
     .replaceAll("http://zingpop.ai", "https://www.zingpop.cn")
+    .replaceAll("zingpop.ai", "www.zingpop.cn")
 }
 
 function brandDisplay(root: HTMLDivElement) {
@@ -289,7 +293,7 @@ export function Markdown(
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [html] = createResource(
     () => ({
-      text: local.text,
+      text: zingpopUrl(local.text),
       key: local.cacheKey,
       streaming: local.streaming ?? false,
     }),
@@ -320,7 +324,7 @@ export function Markdown(
         .then((list) => list.join(""))
         .catch(() => fallback(src.text))
     },
-    { initialValue: fallback(local.text) },
+    { initialValue: fallback(zingpopUrl(local.text)) },
   )
 
   let copyCleanup: (() => void) | undefined

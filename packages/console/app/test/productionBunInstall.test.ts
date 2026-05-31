@@ -17,6 +17,12 @@ describe("production bun install", () => {
     expect(build).toContain('bun run --cwd packages/opencode build "${OPENCODE_BUILD_ARGS[@]}"')
   })
 
+  test("production workbench build forces the Zingpop hosted project flow", async () => {
+    const build = await Bun.file(new URL("scripts/production-build.sh", repo)).text()
+
+    expect(build).toContain("export VITE_ZINGPOP_HOSTED_WORKBENCH=1")
+  })
+
   test("installer avoids stale cache tarballs and verifies critical packages", async () => {
     const install = await Bun.file(new URL("scripts/production-bun-install.sh", repo)).text()
 
