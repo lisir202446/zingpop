@@ -25,6 +25,7 @@ import { TextReveal } from "./text-reveal"
 import { createAutoScroll } from "../hooks"
 import { useI18n } from "../context/i18n"
 import { normalize } from "./session-diff"
+import { assistantMessagesForTurn } from "./session-turn-helpers"
 
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
@@ -267,15 +268,7 @@ export function SessionTurn(
       if (!msg) return emptyAssistant
 
       const messages = allMessages() ?? emptyMessages
-      if (messageIndex() < 0) return emptyAssistant
-
-      const result: AssistantMessage[] = []
-      for (let i = 0; i < messages.length; i++) {
-        const item = messages[i]
-        if (!item) continue
-        if (item.role === "assistant" && item.parentID === msg.id) result.push(item as AssistantMessage)
-      }
-      return result
+      return assistantMessagesForTurn(messages, msg.id)
     },
     emptyAssistant,
     { equals: same },
