@@ -6,7 +6,12 @@ import { badRequest, requireWorkbenchAccess, unauthorized } from "~/lib/zingpop-
 export async function GET(input: APIEvent) {
   const access = await requireWorkbenchAccess()
   if (!access) {
-    auditRequest({ event: "workbench.project.manifest", request: input.request, projectID: input.params.id, status: "denied" })
+    auditRequest({
+      event: "workbench.project.manifest",
+      request: input.request,
+      projectID: input.params.id,
+      status: "denied",
+    })
     return unauthorized()
   }
   const project = await WorkbenchProject.get({ workspaceID: access.workspaceID, projectID: input.params.id })
@@ -22,7 +27,10 @@ export async function GET(input: APIEvent) {
     return unauthorized()
   }
   try {
-    const files = await WorkbenchProject.manifest({ directory: project.directory })
+    const preview = new URL(input.request.url).searchParams.get("preview") === "html"
+    const files = await (preview
+      ? WorkbenchProject.previewManifest({ directory: project.directory })
+      : WorkbenchProject.manifest({ directory: project.directory }))
     auditRequest({
       event: "workbench.project.manifest",
       request: input.request,

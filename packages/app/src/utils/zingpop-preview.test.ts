@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  listZingpopPreviewArtifacts,
   loadZingpopPreviewArtifacts,
   normalizePreviewArtifactPath,
   previewArtifactFromFileContent,
@@ -9,6 +10,7 @@ import {
   previewArtifactPathForLatestTurn,
   previewArtifactPathForTurn,
   previewArtifactPathFromParts,
+  previewTargetReadRetryDelay,
   previewArtifacts,
   selectPreviewArtifact,
   selectVisiblePreviewArtifact,
@@ -335,6 +337,29 @@ describe("zingpop preview utilities", () => {
     }
   })
 
+  test("loads preview artifacts through the lightweight html manifest", async () => {
+    const originalFetch = globalThis.fetch
+    let url = ""
+    globalThis.fetch = Object.assign(
+      ((input: RequestInfo | URL) => {
+        url = String(input)
+        return Promise.resolve(
+          Response.json({
+            files: [{ path: "index.html", size: 1, sha256: "", timeUpdated: 1 }],
+          }),
+        )
+      }) as unknown as typeof fetch,
+      { preconnect: originalFetch.preconnect },
+    )
+
+    try {
+      expect(await listZingpopPreviewArtifacts("project_1")).toHaveLength(1)
+      expect(url).toBe("/_zingpop/project/project_1/manifest?preview=html")
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   test("refreshes only when a running session becomes idle", () => {
     expect(shouldRefreshPreviewArtifacts({ type: "busy" }, { type: "idle" })).toBe(true)
     expect(
@@ -343,5 +368,53 @@ describe("zingpop preview utilities", () => {
     expect(shouldRefreshPreviewArtifacts({ type: "idle" }, { type: "idle" })).toBe(false)
     expect(shouldRefreshPreviewArtifacts(undefined, { type: "idle" })).toBe(false)
     expect(shouldRefreshPreviewArtifacts({ type: "busy" }, { type: "busy" })).toBe(false)
+  })
+
+  test("retries direct target html reads while the file is not readable yet", () => {
+    const artifact = previewArtifactFromFileContent("game.html", {
+      type: "text",
+      content: "<!doctype html><canvas></canvas>",
+    })
+
+    expect(
+      previewTargetReadRetryDelay({
+        targetPath: "game.html",
+        targetArtifact: undefined,
+        loading: false,
+        attempt: 0,
+      }),
+    ).toBe(120)
+    expect(
+      previewTargetReadRetryDelay({
+        targetPath: "game.html",
+        targetArtifact: undefined,
+        loading: true,
+        attempt: 0,
+      }),
+    ).toBeUndefined()
+    expect(
+      previewTargetReadRetryDelay({
+        targetPath: "game.html",
+        targetArtifact: artifact,
+        loading: false,
+        attempt: 0,
+      }),
+    ).toBeUndefined()
+    expect(
+      previewTargetReadRetryDelay({
+        targetPath: undefined,
+        targetArtifact: undefined,
+        loading: false,
+        attempt: 0,
+      }),
+    ).toBeUndefined()
+    expect(
+      previewTargetReadRetryDelay({
+        targetPath: "game.html",
+        targetArtifact: undefined,
+        loading: false,
+        attempt: 6,
+      }),
+    ).toBeUndefined()
   })
 })

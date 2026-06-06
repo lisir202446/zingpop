@@ -109,6 +109,12 @@ export namespace WorkbenchProject {
     return Boolean(previewContentType({ path: input.path }))
   }
 
+  function previewManifestAllowed(input: { path: string; size: number }) {
+    if (!uploadAllowed(input)) return false
+    const ext = path.extname(safeRelativePath(input.path)).toLowerCase()
+    return ext === ".html" || ext === ".htm"
+  }
+
   export function validateGitImport(input: { url: string; branch?: string }) {
     const url = new URL(input.url)
     if (url.protocol !== "https:") throw new Error("Git import requires HTTPS URLs")
@@ -360,6 +366,40 @@ export namespace WorkbenchProject {
 
   export async function manifest(input: { directory: string }) {
     return walk({ directory: fsResolve(input.directory), base: fsResolve(input.directory) }).then((entries) =>
+      entries.sort((a, b) => a.path.localeCompare(b.path)),
+    )
+  }
+
+  async function walkPreview(input: { directory: string; base: string }): Promise<ManifestEntry[]> {
+    const entries = await readdir(input.directory, { withFileTypes: true }).catch(() => [])
+    return (
+      await Promise.all(
+        entries.map(async (entry): Promise<ManifestEntry[]> => {
+          const absolute = fsJoin(input.directory, entry.name)
+          const relative = fsRelative(input.base, absolute).replaceAll("\\", "/")
+          if (entry.isDirectory()) {
+            if (excludedDirectories.has(entry.name)) return []
+            return walkPreview({ directory: absolute, base: input.base })
+          }
+          if (!entry.isFile()) return []
+
+          const info = await stat(absolute)
+          if (!previewManifestAllowed({ path: relative, size: info.size })) return []
+          return [
+            {
+              path: safeRelativePath(relative),
+              size: info.size,
+              sha256: "",
+              timeUpdated: info.mtimeMs,
+            },
+          ]
+        }),
+      )
+    ).flat()
+  }
+
+  export async function previewManifest(input: { directory: string }) {
+    return walkPreview({ directory: fsResolve(input.directory), base: fsResolve(input.directory) }).then((entries) =>
       entries.sort((a, b) => a.path.localeCompare(b.path)),
     )
   }

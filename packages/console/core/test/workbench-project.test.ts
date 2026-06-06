@@ -69,6 +69,28 @@ describe("workbench project helpers", () => {
     )
   })
 
+  test("preview manifests list html files without content hashes", async () => {
+    const directory = await tempProject()
+
+    await WorkbenchProject.uploadFiles({
+      directory,
+      files: [
+        { path: "index.html", contentBase64: Buffer.from("<!doctype html>").toString("base64") },
+        { path: "style.css", contentBase64: Buffer.from("body{}").toString("base64") },
+        { path: "src/app.js", contentBase64: Buffer.from("console.log(1)").toString("base64") },
+        { path: "notes.txt", contentBase64: Buffer.from("notes").toString("base64") },
+      ],
+    })
+
+    expect(await WorkbenchProject.previewManifest({ directory })).toEqual([
+      expect.objectContaining({
+        path: "index.html",
+        sha256: "",
+        size: 15,
+      }),
+    ])
+  })
+
   test("runtime project helpers use Node-compatible APIs", async () => {
     expect(await readFile(join(import.meta.dir, "..", "src", "workbench-project.ts"), "utf8")).not.toContain("Bun.")
   })

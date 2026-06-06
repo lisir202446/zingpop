@@ -20,6 +20,8 @@ export type PreviewArtifactPanelState =
   | { type: "loading" }
   | { type: "empty" }
 
+const previewTargetReadRetryDelays = [120, 240, 500, 1_000, 1_500, 2_000] as const
+
 type TurnMessage = {
   id: string
   role: string
@@ -35,9 +37,7 @@ function assistantMessagesForTurn(messages: TurnMessage[], messageID: string) {
 
   const candidates = messages.slice(turnStart + 1)
   const nextUser = candidates.findIndex((message) => message.role === "user")
-  return candidates
-    .slice(0, nextUser === -1 ? undefined : nextUser)
-    .filter((message) => message.role === "assistant")
+  return candidates.slice(0, nextUser === -1 ? undefined : nextUser).filter((message) => message.role === "assistant")
 }
 
 export function shouldRefreshPreviewArtifacts(
@@ -45,6 +45,16 @@ export function shouldRefreshPreviewArtifacts(
   next: PreviewRefreshStatus | undefined,
 ) {
   return previous !== undefined && previous.type !== "idle" && next?.type === "idle"
+}
+
+export function previewTargetReadRetryDelay(input: {
+  targetPath?: string
+  targetArtifact?: PreviewArtifact
+  loading: boolean
+  attempt: number
+}) {
+  if (!input.targetPath || input.targetArtifact || input.loading) return
+  return previewTargetReadRetryDelays[input.attempt]
 }
 
 export function isZingpopPreviewArtifact(path: string) {
@@ -199,7 +209,7 @@ export function selectVisiblePreviewArtifact(input: {
 }
 
 export async function listZingpopPreviewArtifacts(projectID: string) {
-  const response = await fetch(`/_zingpop/project/${encodeURIComponent(projectID)}/manifest`, {
+  const response = await fetch(`/_zingpop/project/${encodeURIComponent(projectID)}/manifest?preview=html`, {
     credentials: "include",
   })
   if (!response.ok) throw new Error("Unable to load project files")

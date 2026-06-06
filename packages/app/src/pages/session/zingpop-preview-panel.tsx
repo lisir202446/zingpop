@@ -1,6 +1,17 @@
 import { Button } from "@opencode-ai/ui/button"
 import { IconButton } from "@opencode-ai/ui/icon-button"
-import { For, Match, Show, Switch, createEffect, createMemo, createResource, on, onCleanup } from "solid-js"
+import {
+  For,
+  Match,
+  Show,
+  Switch,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  on,
+  onCleanup,
+} from "solid-js"
 import { useSync } from "@/context/sync"
 import { useSDK } from "@/context/sdk"
 import { useSessionLayout } from "@/pages/session/session-layout"
@@ -17,6 +28,7 @@ import {
   previewArtifactPanelState,
   previewArtifactPathForDirectory,
   previewArtifactPathForLatestTurn,
+  previewTargetReadRetryDelay,
   selectVisiblePreviewArtifact,
   shouldRefreshPreviewArtifacts,
   type PreviewArtifact,
@@ -51,12 +63,13 @@ function createZingpopPreviewArtifacts(
     },
     (project) => loadZingpopPreviewArtifacts(project),
   )
-  const [targetArtifact] = createResource(targetPath, (path) =>
+  const [targetArtifact, { refetch: refetchTargetArtifact }] = createResource(targetPath, (path) =>
     sdk.client.file
       .read({ path })
       .then((result) => previewArtifactFromFileContent(path, result.data))
       .catch(() => undefined),
   )
+  const [targetRetryAttempt, setTargetRetryAttempt] = createSignal(0)
   const entries = createMemo(() => artifacts()?.artifacts ?? [])
   const first = createMemo(() =>
     selectVisiblePreviewArtifact({
@@ -75,6 +88,28 @@ function createZingpopPreviewArtifacts(
   )
   const status = createMemo(() => (params.id ? (sync.data.session_status[params.id] ?? idle) : idle))
   let refreshTimer: number | undefined
+  let targetRetryTimer: number | undefined
+
+  createEffect(on(targetPath, () => setTargetRetryAttempt(0)))
+
+  createEffect(() => {
+    if (targetRetryTimer !== undefined) window.clearTimeout(targetRetryTimer)
+    targetRetryTimer = undefined
+
+    const delay = previewTargetReadRetryDelay({
+      targetPath: targetPath(),
+      targetArtifact: targetArtifact(),
+      loading: targetArtifact.loading,
+      attempt: targetRetryAttempt(),
+    })
+    if (delay === undefined) return
+
+    targetRetryTimer = window.setTimeout(() => {
+      targetRetryTimer = undefined
+      void refetchTargetArtifact()
+      setTargetRetryAttempt((attempt) => attempt + 1)
+    }, delay)
+  })
 
   createEffect(
     on(
@@ -83,6 +118,7 @@ function createZingpopPreviewArtifacts(
         if (!projectID()) return
         if (!shouldRefreshPreviewArtifacts(previous, next)) return
         if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+        if (targetPath()) void refetchTargetArtifact()
         refreshTimer = window.setTimeout(() => {
           refreshTimer = undefined
           void refetch()
@@ -94,6 +130,7 @@ function createZingpopPreviewArtifacts(
 
   onCleanup(() => {
     if (refreshTimer !== undefined) window.clearTimeout(refreshTimer)
+    if (targetRetryTimer !== undefined) window.clearTimeout(targetRetryTimer)
   })
 
   return {
@@ -103,6 +140,7 @@ function createZingpopPreviewArtifacts(
     first,
     panel,
     refetch: () => {
+      if (targetPath()) void refetchTargetArtifact()
       void refetch()
     },
   }
