@@ -34,6 +34,7 @@ import { sessionTitle } from "@/utils/session-title"
 import { parseCommentNote, readCommentMetadata } from "@/utils/comment-note"
 import { makeTimer } from "@solid-primitives/timer"
 import { ZingpopPreviewInline } from "@/pages/session/zingpop-preview-panel"
+import { previewArtifactPathForTurn } from "@/utils/zingpop-preview"
 
 type MessageComment = {
   path: string
@@ -1040,6 +1041,13 @@ export function MessageTimeline(props: {
                           c.selection?.endLine === b[i].selection?.endLine,
                       ),
                   })
+                  const previewTargetPath = createMemo(() =>
+                    previewArtifactPathForTurn({
+                      messages: sessionMessages(),
+                      parts: sync.data.part,
+                      messageID,
+                    }),
+                  )
                   const commentCount = createMemo(() => comments().length)
                   return (
                     <div
@@ -1111,7 +1119,7 @@ export function MessageTimeline(props: {
                         }}
                       />
                       <Show when={messageID === latestRenderedMessageID()}>
-                        <ZingpopPreviewInline />
+                        <ZingpopPreviewInline targetPath={previewTargetPath()} />
                       </Show>
                     </div>
                   )

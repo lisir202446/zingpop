@@ -40,6 +40,8 @@ if [[ ! -x /usr/local/bin/bun ]]; then
   install -Dm755 "$(command -v bun)" /usr/local/bin/bun
 fi
 
+bun "$ROOT_DIR/scripts/verify-zingpop-opencode-config.mjs"
+
 if id zingpop >/dev/null 2>&1; then
   usermod --home /srv/zingpop zingpop >/dev/null 2>&1 || true
 else

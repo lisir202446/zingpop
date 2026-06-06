@@ -20,6 +20,18 @@ if ! command -v bun >/dev/null 2>&1; then
 fi
 
 cd "$ROOT"
+bun scripts/verify-zingpop-opencode-config.mjs
+ENV_FILE="${ZINGPOP_ENV_FILE:-$ROOT/deploy/env/zingpop.env.local}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+if [ -z "${ZAI_API_KEY:-}" ] || [ "${ZAI_API_KEY:-}" = "replace-with-official-glm-key" ]; then
+  echo "ZAI_API_KEY is required for GLM requests. Export it or set ZINGPOP_ENV_FILE to an env file before starting cloud dev." >&2
+  exit 1
+fi
 bun install
 
 mkdir -p "$ROOT/.cloud-logs"
@@ -31,6 +43,10 @@ BACKEND_ENV=()
 if [ -n "$PASSWORD" ]; then
   BACKEND_ENV=(OPENCODE_SERVER_PASSWORD="$PASSWORD")
 fi
+BACKEND_ENV+=(
+  OPENCODE_CONFIG_DIR="$ROOT/deploy/opencode"
+  OPENCODE_DISABLE_PROJECT_CONFIG=1
+)
 
 env "${BACKEND_ENV[@]}" nohup bun run --cwd packages/opencode --conditions=browser src/index.ts serve \
   --hostname 0.0.0.0 \

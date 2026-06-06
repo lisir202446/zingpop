@@ -76,6 +76,12 @@ function checkEnvFile() {
     record("pass", "OPENCODE_SERVER_PASSWORD", "present and non-default length")
   }
 
+  if (!env.ZAI_API_KEY || env.ZAI_API_KEY === "replace-with-official-glm-key") {
+    record("fail", "ZAI_API_KEY", "missing or placeholder")
+  } else {
+    record("pass", "ZAI_API_KEY", "present and non-placeholder")
+  }
+
   for (const key of ["MYSQL_PASSWORD", "SMS_PROVIDER"]) {
     record(env[key] ? "pass" : strict ? "fail" : "warn", key, env[key] ? "present" : "missing")
   }

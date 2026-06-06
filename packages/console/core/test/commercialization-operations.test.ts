@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import { mkdir, rm } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 
 const root = new URL("../../../../", import.meta.url)
 
@@ -88,6 +90,45 @@ describe("commercialization operations artifacts", () => {
 
     expect(audit).toContain("@openauthjs/openauth")
     expect(audit).toContain("@solidjs/start")
+  })
+
+  test("fail production security checks when the GLM API key is missing", async () => {
+    const envFile = new URL(`../tmp/security-check-${crypto.randomUUID()}.env`, import.meta.url)
+    await mkdir(new URL("../tmp/", import.meta.url), { recursive: true })
+    await Bun.write(
+      envFile,
+      [
+        "OPENCODE_SERVER_PASSWORD=strong-opencode-password-for-test",
+        "MYSQL_PASSWORD=strong-mysql-password-for-test",
+        "SMS_PROVIDER=huawei_apig",
+      ].join("\n"),
+    )
+
+    const result = Bun.spawnSync(
+      [
+        "bun",
+        fileURLToPath(new URL("../../../../scripts/production-security-check.mjs", import.meta.url)),
+        "--repo",
+        fileURLToPath(root),
+        "--env-file",
+        fileURLToPath(envFile),
+        "--strict",
+      ],
+      { stdout: "pipe", stderr: "pipe" },
+    )
+
+    expect(result.exitCode).not.toBe(0)
+    expect(`${result.stdout.toString()}\n${result.stderr.toString()}`).toContain("ZAI_API_KEY")
+    await rm(envFile)
+  })
+
+  test("local workbench launchers guard the GLM runtime key", async () => {
+    for (const path of ["scripts/local-workbench.ps1", "scripts/cloud-dev.sh"]) {
+      const source = await Bun.file(new URL(path, root)).text()
+
+      expect(source).toContain("ZAI_API_KEY")
+      expect(source).toContain("replace-with-official-glm-key")
+    }
   })
 
   test("database backups work with least-privilege MySQL users", async () => {

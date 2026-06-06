@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$ROOT_DIR"
 
+bun scripts/verify-zingpop-opencode-config.mjs
+
 export NODE_ENV=production
 export VITE_ZINGPOP_HOSTED_WORKBENCH=1
 OPENCODE_BUILD_ARGS=(--single)

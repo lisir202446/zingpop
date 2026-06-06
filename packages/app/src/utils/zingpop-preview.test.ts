@@ -1,7 +1,17 @@
 import { describe, expect, test } from "bun:test"
 import {
   loadZingpopPreviewArtifacts,
+  normalizePreviewArtifactPath,
+  previewArtifactFromFileContent,
+  previewArtifactName,
+  previewArtifactPanelState,
+  previewArtifactPathForDirectory,
+  previewArtifactPathForLatestTurn,
+  previewArtifactPathForTurn,
+  previewArtifactPathFromParts,
   previewArtifacts,
+  selectPreviewArtifact,
+  selectVisiblePreviewArtifact,
   shouldRefreshPreviewArtifacts,
   zingpopPreviewFileUrl,
   zingpopPreviewUrl,
@@ -17,6 +27,19 @@ describe("zingpop preview utilities", () => {
     )
   })
 
+  test("normalizes generated html paths from Windows file tools", () => {
+    expect(normalizePreviewArtifactPath(".\\nested\\parkour-game.html")).toBe("nested/parkour-game.html")
+    expect(previewArtifactName("C:\\Users\\34682\\AppData\\Local\\Temp\\project\\parkour-game.html")).toBe(
+      "parkour-game.html",
+    )
+    expect(
+      previewArtifactPathForDirectory(
+        "C:\\Users\\34682\\AppData\\Local\\Temp\\project\\parkour-game.html",
+        "C:\\Users\\34682\\AppData\\Local\\Temp\\project",
+      ),
+    ).toBe("parkour-game.html")
+  })
+
   test("keeps html artifacts sorted for users", () => {
     expect(
       previewArtifacts("project_1", [
@@ -26,6 +49,273 @@ describe("zingpop preview utilities", () => {
         { path: "game.htm", size: 1, sha256: "d", timeUpdated: 4 },
       ]).map((item) => item.path),
     ).toEqual(["index.html", "game.htm", "about.html"])
+  })
+
+  test("selects the html file written by the current assistant turn", () => {
+    const artifacts = previewArtifacts("project_1", [
+      { path: "snake.html", size: 1, sha256: "a", timeUpdated: 20 },
+      { path: "parkour.html", size: 1, sha256: "b", timeUpdated: 10 },
+    ])
+
+    expect(selectPreviewArtifact(artifacts, "parkour.html")?.path).toBe("parkour.html")
+    expect(selectPreviewArtifact(artifacts, "C:\\repo\\project\\parkour.html")?.path).toBe("parkour.html")
+    expect(selectPreviewArtifact(artifacts, "missing.html", false)).toBeUndefined()
+  })
+
+  test("finds the latest generated html path from assistant tool parts", () => {
+    expect(
+      previewArtifactPathFromParts([
+        {
+          id: "part_1",
+          sessionID: "session_1",
+          messageID: "message_1",
+          type: "tool",
+          callID: "call_1",
+          tool: "write",
+          state: {
+            status: "completed",
+            input: { filePath: "snake.html" },
+            output: "",
+            title: "write",
+            metadata: {},
+            time: { start: 1, end: 2 },
+          },
+        },
+        {
+          id: "part_2",
+          sessionID: "session_1",
+          messageID: "message_1",
+          type: "tool",
+          callID: "call_2",
+          tool: "write",
+          state: {
+            status: "completed",
+            input: { filePath: "parkour.html" },
+            output: "",
+            title: "write",
+            metadata: {},
+            time: { start: 3, end: 4 },
+          },
+        },
+      ]),
+    ).toBe("parkour.html")
+  })
+
+  test("finds the generated html path from the assistant reply for the current turn", () => {
+    expect(
+      previewArtifactPathForTurn({
+        messageID: "user_1",
+        messages: [
+          { id: "user_1", role: "user" },
+          { id: "assistant_1", role: "assistant", parentID: "user_1" },
+        ],
+        parts: {
+          user_1: [],
+          assistant_1: [
+            {
+              id: "part_1",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_1",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { filePath: "parkour.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 1, end: 2 },
+              },
+            },
+          ],
+        },
+      }),
+    ).toBe("parkour.html")
+  })
+
+  test("finds generated html from the following assistant when parent linkage is unavailable", () => {
+    expect(
+      previewArtifactPathForTurn({
+        messageID: "user_2",
+        messages: [
+          { id: "user_1", role: "user" },
+          { id: "assistant_1", role: "assistant" },
+          { id: "user_2", role: "user" },
+          { id: "assistant_2", role: "assistant" },
+        ],
+        parts: {
+          assistant_1: [
+            {
+              id: "part_1",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_1",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { filePath: "parkour.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 1, end: 2 },
+              },
+            },
+          ],
+          assistant_2: [
+            {
+              id: "part_2",
+              sessionID: "session_1",
+              messageID: "assistant_2",
+              type: "tool",
+              callID: "call_2",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { filePath: "shooting-game.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 3, end: 4 },
+              },
+            },
+          ],
+        },
+      }),
+    ).toBe("shooting-game.html")
+  })
+
+  test("finds the latest generated html path for the latest user turn", () => {
+    expect(
+      previewArtifactPathForLatestTurn({
+        messages: [
+          { id: "user_1", role: "user" },
+          { id: "assistant_1", role: "assistant", parentID: "user_1" },
+          { id: "user_2", role: "user" },
+          { id: "assistant_2", role: "assistant", parentID: "user_2" },
+        ],
+        parts: {
+          assistant_1: [
+            {
+              id: "part_1",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_1",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { filePath: "snake.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 1, end: 2 },
+              },
+            },
+          ],
+          assistant_2: [
+            {
+              id: "part_2",
+              sessionID: "session_1",
+              messageID: "assistant_2",
+              type: "tool",
+              callID: "call_2",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { filePath: "parkour-game.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 3, end: 4 },
+              },
+            },
+          ],
+        },
+      }),
+    ).toBe("parkour-game.html")
+  })
+
+  test("builds an inline html preview artifact from file content", () => {
+    expect(
+      previewArtifactFromFileContent("nested\\parkour-game.html", {
+        type: "text",
+        content: "<!doctype html><canvas></canvas>",
+      }),
+    ).toMatchObject({
+      path: "nested/parkour-game.html",
+      name: "parkour-game.html",
+      html: "<!doctype html><canvas></canvas>",
+    })
+  })
+
+  test("does not choose a stale html artifact when the current turn path is unavailable", () => {
+    const artifacts = previewArtifacts("project_1", [{ path: "index.html", size: 1, sha256: "a", timeUpdated: 1 }])
+
+    expect(
+      selectVisiblePreviewArtifact({
+        artifacts,
+        targetPath: undefined,
+        manifestFallback: false,
+      }),
+    ).toBeUndefined()
+  })
+
+  test("does not show existing project html when the current turn did not write html", () => {
+    const artifacts = previewArtifacts("project_1", [{ path: "parkour.html", size: 1, sha256: "a", timeUpdated: 1 }])
+
+    expect(
+      selectVisiblePreviewArtifact({
+        artifacts,
+        targetPath: undefined,
+      }),
+    ).toBeUndefined()
+  })
+
+  test("does not reuse a stale inline html artifact for a different target path", () => {
+    expect(
+      selectVisiblePreviewArtifact({
+        artifacts: [],
+        targetPath: "parkour.html",
+        targetArtifact: previewArtifactFromFileContent("snake.html", {
+          type: "text",
+          content: "<!doctype html><canvas></canvas>",
+        }),
+      }),
+    ).toBeUndefined()
+  })
+
+  test("uses the current turn inline artifact while the manifest still has older html files", () => {
+    const current = previewArtifactFromFileContent("shooting-game.html", {
+      type: "text",
+      content: "<!doctype html><canvas id='game'></canvas>",
+    })
+
+    expect(current).toBeDefined()
+    expect(
+      selectVisiblePreviewArtifact({
+        artifacts: previewArtifacts("project_1", [
+          { path: "parkour.html", size: 1, sha256: "a", timeUpdated: 30 },
+          { path: "snake.html", size: 1, sha256: "b", timeUpdated: 20 },
+        ]),
+        targetPath: "shooting-game.html",
+        targetArtifact: current,
+      })?.path,
+    ).toBe("shooting-game.html")
+  })
+
+  test("shows a preview artifact before a manifest error", () => {
+    const artifact = previewArtifactFromFileContent("parkour-game.html", {
+      type: "text",
+      content: "<!doctype html><canvas></canvas>",
+    })
+    expect(artifact).toBeDefined()
+
+    expect(previewArtifactPanelState({ artifact, error: "Unable to load project files", loading: false })).toEqual({
+      type: "preview",
+      artifact: artifact!,
+    })
   })
 
   test("loads manifest failures as panel state instead of throwing", async () => {
@@ -47,7 +337,9 @@ describe("zingpop preview utilities", () => {
 
   test("refreshes only when a running session becomes idle", () => {
     expect(shouldRefreshPreviewArtifacts({ type: "busy" }, { type: "idle" })).toBe(true)
-    expect(shouldRefreshPreviewArtifacts({ type: "retry", attempt: 1, message: "try again", next: 2 }, { type: "idle" })).toBe(true)
+    expect(
+      shouldRefreshPreviewArtifacts({ type: "retry", attempt: 1, message: "try again", next: 2 }, { type: "idle" }),
+    ).toBe(true)
     expect(shouldRefreshPreviewArtifacts({ type: "idle" }, { type: "idle" })).toBe(false)
     expect(shouldRefreshPreviewArtifacts(undefined, { type: "idle" })).toBe(false)
     expect(shouldRefreshPreviewArtifacts({ type: "busy" }, { type: "busy" })).toBe(false)
