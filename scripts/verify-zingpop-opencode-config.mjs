@@ -5,6 +5,7 @@ const configUrl = new URL("../deploy/opencode/opencode.json", import.meta.url)
 const raw = await readFile(configUrl, "utf8")
 const config = JSON.parse(raw)
 const errors = []
+const allowedZaiGlmModels = ["glm-4.5-air", "glm-4.6", "glm-4.7", "glm-5", "glm-5-turbo", "glm-5.1"]
 
 const assertEqual = (label, actual, expected) => {
   if (JSON.stringify(actual) === JSON.stringify(expected)) return
@@ -16,7 +17,7 @@ assertEqual("model", config.model, "zai-glm/glm-5-turbo")
 assertEqual("small_model", config.small_model, "zai-glm/glm-5-turbo")
 assertEqual("agent.build.model", config.agent?.build?.model, "zai-glm/glm-5-turbo")
 assertEqual("provider keys", Object.keys(config.provider ?? {}), ["zai-glm"])
-assertEqual("zai-glm model keys", Object.keys(config.provider?.["zai-glm"]?.models ?? {}), ["glm-5-turbo"])
+assertEqual("zai-glm model keys", Object.keys(config.provider?.["zai-glm"]?.models ?? {}), allowedZaiGlmModels)
 
 for (const marker of ["MyTokenLand", "mytokenland", "Qwen", "qwen", "openrouter", "deepseek"]) {
   if (!raw.includes(marker)) continue
@@ -29,4 +30,4 @@ if (errors.length > 0) {
   process.exit(1)
 }
 
-console.log("Zingpop opencode config verified: zai-glm/glm-5-turbo only")
+console.log("Zingpop opencode config verified: official Z.AI GLM models only; default zai-glm/glm-5-turbo")
