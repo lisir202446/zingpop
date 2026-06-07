@@ -11,6 +11,7 @@ deploy/env/*.local
 .vscode
 .codex
 .codex-local/
+.superpowers/
 .claude/settings.local.json
 outputs/
 *.tar
