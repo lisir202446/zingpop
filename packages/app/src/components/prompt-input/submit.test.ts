@@ -74,10 +74,6 @@ beforeAll(async () => {
     showToast: () => 0,
   }))
 
-  mock.module("@opencode-ai/shared/util/encode", () => ({
-    base64Encode: (value: string) => value,
-  }))
-
   mock.module("@/context/local", () => ({
     useLocal: () => ({
       model: {

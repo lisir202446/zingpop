@@ -8,18 +8,10 @@ import { useLanguage } from "@/context/language"
 import { usePermission } from "@/context/permission"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
+import { todoState } from "./session-composer-helpers"
 import { sessionPermissionRequest, sessionQuestionRequest } from "./session-request-tree"
 
-export const todoState = (input: {
-  count: number
-  done: boolean
-  live: boolean
-}): "hide" | "clear" | "open" | "close" => {
-  if (input.count === 0) return "hide"
-  if (!input.live) return "clear"
-  if (!input.done) return "open"
-  return "close"
-}
+export { todoState } from "./session-composer-helpers"
 
 const idle = { type: "idle" as const }
 

@@ -10,7 +10,7 @@ import { useFileComponent } from "../context/file"
 
 import { Binary } from "@opencode-ai/shared/util/binary"
 import { getDirectory, getFilename } from "@opencode-ai/shared/util/path"
-import { createEffect, createMemo, createSignal, For, on, ParentProps, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, ParentProps, Show, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Dynamic } from "solid-js/web"
 import { AssistantParts, Message, MessageDivider, PART_MAPPING, type UserActions } from "./message-part"
@@ -155,6 +155,7 @@ export function SessionTurn(
     editToolDefaultOpen?: boolean
     active?: boolean
     status?: SessionStatus
+    assistantPrefix?: JSX.Element
     onUserInteracted?: () => void
     classes?: {
       root?: string
@@ -391,6 +392,7 @@ export function SessionTurn(
                   <MessageDivider label={divider()} />
                 </div>
               </Show>
+              {props.assistantPrefix}
               <Show when={assistantMessages().length > 0}>
                 <div data-slot="session-turn-assistant-content" aria-hidden={working()}>
                   <AssistantParts

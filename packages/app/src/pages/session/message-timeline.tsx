@@ -29,12 +29,15 @@ import { usePlatform } from "@/context/platform"
 import { useSettings } from "@/context/settings"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
+import { usePermission } from "@/context/permission"
 import { messageAgentColor } from "@/utils/agent"
 import { sessionTitle } from "@/utils/session-title"
 import { parseCommentNote, readCommentMetadata } from "@/utils/comment-note"
 import { makeTimer } from "@solid-primitives/timer"
 import { ZingpopPreviewInline } from "@/pages/session/zingpop-preview-panel"
 import { previewArtifactPathForTurn } from "@/utils/zingpop-preview"
+import { SessionProgressNarrative } from "@/pages/session/session-progress-narrative"
+import { sessionPermissionRequest, sessionQuestionRequest } from "@/pages/session/composer/session-request-tree"
 
 type MessageComment = {
   path: string
@@ -239,6 +242,7 @@ export function MessageTimeline(props: {
   const sdk = useSDK()
   const sync = useSync()
   const settings = useSettings()
+  const permission = usePermission()
   const dialog = useDialog()
   const language = useLanguage()
   const { params, sessionKey } = useSessionKey()
@@ -265,7 +269,17 @@ export function MessageTimeline(props: {
     if (!id) return idle
     return sync.data.session_status[id] ?? idle
   })
-  const working = createMemo(() => !!pending() || sessionStatus().type !== "idle")
+  const waitingForResponse = createMemo(() => {
+    const id = sessionID()
+    if (!id) return false
+    return Boolean(
+      sessionQuestionRequest(sync.data.session, sync.data.question, id) ||
+        sessionPermissionRequest(sync.data.session, sync.data.permission, id, (item) => {
+          return !permission.autoResponds(item, sdk.directory)
+        }),
+    )
+  })
+  const working = createMemo(() => !!pending() || sessionStatus().type !== "idle" || waitingForResponse())
   const tint = createMemo(() => messageAgentColor(sessionMessages(), sync.data.agent))
 
   const [timeoutDone, setTimeoutDone] = createSignal(true)
@@ -293,7 +307,7 @@ export function MessageTimeline(props: {
     }
 
     const status = sessionStatus()
-    if (status.type !== "idle") {
+    if (status.type !== "idle" || waitingForResponse()) {
       const messages = sessionMessages()
       for (let i = messages.length - 1; i >= 0; i--) {
         if (messages[i].role === "user") return messages[i].id
@@ -1112,6 +1126,15 @@ export function MessageTimeline(props: {
                         showReasoningSummaries={settings.general.showReasoningSummaries()}
                         shellToolDefaultOpen={settings.general.shellToolPartsExpanded()}
                         editToolDefaultOpen={settings.general.editToolPartsExpanded()}
+                        assistantPrefix={
+                          <SessionProgressNarrative
+                            messageID={messageID}
+                            messages={sessionMessages()}
+                            parts={sync.data.part}
+                            status={active() ? sessionStatus() : undefined}
+                            waiting={active() && waitingForResponse()}
+                          />
+                        }
                         classes={{
                           root: "min-w-0 w-full relative",
                           content: "flex flex-col justify-between !overflow-visible",
