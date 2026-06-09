@@ -261,6 +261,39 @@ describe("session progress narrative", () => {
     expect(text).not.toContain("JSON parsing")
   })
 
+  test("builds Codex-style user-readable progress without raw execution details", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [
+          tool("read", "completed", { filePath: "study-plan.html" }),
+          tool("write", "completed", { filePath: "/srv/zingpop/workspaces/wrk_1/study-plan.html" }),
+          tool("invalid", "error", {
+            tool: "write",
+            filePath: "/srv/zingpop/workspaces/wrk_1/study-plan.html",
+            error: "Invalid input for tool write: JSON parsing failed",
+          }),
+          tool("bash", "running", { command: "cat > study-plan.html <<'EOF'" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 4000,
+    })
+    const text = narrative.events.map((event) => `${event.status}:${event.detailCount}:${event.text}`).join("\n")
+
+    expect(narrative.busy).toBe(true)
+    expect(narrative.events).toHaveLength(3)
+    expect(text).toContain("done:1")
+    expect(text).toContain("active:4")
+    expect(text).toContain("写入 study-plan.html 时遇到格式限制")
+    expect(text).not.toContain("JSON parsing")
+    expect(text).not.toContain("filePath")
+    expect(text).not.toContain("cat >")
+    expect(text).not.toContain("探索")
+    expect(text).not.toContain("修改")
+  })
+
   test("treats shell file creation as an editing progress step", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
