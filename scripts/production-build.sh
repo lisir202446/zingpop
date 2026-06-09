@@ -27,6 +27,7 @@ BUILD_COMMIT="${ZINGPOP_BUILD_COMMIT:-$(git rev-parse HEAD 2>/dev/null || echo u
 BUILD_TIME="${ZINGPOP_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 mkdir -p packages/app/dist
 printf '{\n  "commit": "%s",\n  "builtAt": "%s"\n}\n' "$BUILD_COMMIT" "$BUILD_TIME" > packages/app/dist/zingpop-build.json
+bun scripts/production-ux-probe.mjs --dist packages/app/dist --expected-commit "$BUILD_COMMIT" --skip-remote
 
 # Product home build is separate from the opencode workbench.
 rm -rf \
