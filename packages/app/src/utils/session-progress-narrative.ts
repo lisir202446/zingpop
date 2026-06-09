@@ -56,9 +56,8 @@ export function buildSessionProgressNarrative(input: {
   now?: number
 }): SessionProgressNarrative {
   const assistantMessages = assistantMessagesForProgress(input.messages, input.messageID)
-  const tools = assistantMessages.flatMap((message) =>
-    (input.parts[message.id] ?? []).filter((part): part is ToolPart => part.type === "tool"),
-  )
+  const assistantParts = assistantMessages.flatMap((message) => input.parts[message.id] ?? [])
+  const tools = assistantParts.filter((part): part is ToolPart => part.type === "tool")
   const busy = input.status?.type === "busy" || input.status?.type === "retry" || input.waiting === true
   const running = tools.findLast((part) => part.state.status === "pending" || part.state.status === "running")
   const errored = tools.findLast((part) => part.state.status === "error")
@@ -79,7 +78,7 @@ export function buildSessionProgressNarrative(input: {
     busy,
     input.now,
   )
-  const events = progressEvents({ phase, tools, busy, elapsedMs: elapsed })
+  const events = progressEvents({ phase, parts: assistantParts, tools, busy, elapsedMs: elapsed })
   const todo = progressTodo(tools)
 
   return {
@@ -197,19 +196,23 @@ function progressLines(input: {
 
 function progressEvents(input: {
   phase: SessionProgressPhase
+  parts: readonly Part[]
   tools: readonly ToolPart[]
   busy: boolean
   elapsedMs?: number
 }) {
-  const events = progressEventGroups(input.tools).map(
-    (group, index): SessionProgressEvent => ({
-      id: `${group.key}:${index}:${group.detailCount}`,
-      phase: group.phase,
-      detailCount: group.detailCount,
-      status: groupStatus(group.parts),
-      text: progressEventText(group),
-    }),
-  )
+  const events = compactProgressEvents([
+    ...progressEventGroups(input.tools).map(
+      (group, index): SessionProgressEvent => ({
+        id: `${group.key}:${index}:${group.detailCount}`,
+        phase: group.phase,
+        detailCount: group.detailCount,
+        status: groupStatus(group.parts),
+        text: progressEventText(group),
+      }),
+    ),
+    ...progressTextEvents(input.parts),
+  ]).sort((a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id))
   if (events.length > 0) return events
 
   return progressLines({
@@ -226,6 +229,14 @@ function progressEvents(input: {
       status: input.busy ? "active" : "done",
       text,
     }),
+  )
+}
+
+function compactProgressEvents(events: readonly SessionProgressEvent[]) {
+  return events.filter(
+    (event, index) =>
+      event.text.trim().length > 0 &&
+      events.findIndex((item) => item.text === event.text && item.detailCount === event.detailCount) === index,
   )
 }
 
@@ -288,15 +299,15 @@ function progressEventText(group: ProgressEventGroup) {
   if (group.key === "planning") return "我已经把任务拆成步骤，正在按顺序推进。"
   if (group.key === "exploring") {
     if (active) return "我正在检查项目上下文，确认应该在哪些文件里修改。"
-    return `我已经检查了${target ? ` ${target} ` : "项目里的相关文件和上下文"}，确认下一步该改哪里。`
+    return `我已经检查了${target ? ` ${target}` : "项目里的相关文件和上下文"}，确认下一步该改哪里。`
   }
   if (group.key === "editing") {
     if (active) return `我正在更新${target ? ` ${target}` : "目标文件"}，把需求落到可以运行的页面里。`
     return `我已经更新了${target ? ` ${target}` : "目标文件"}，主要内容已经写入。`
   }
   if (group.key === "recovery") {
-    if (active) return `写入${target ? ` ${target} ` : "文件"}时遇到格式限制，我正在改用更稳定的方式继续生成。`
-    return `写入${target ? ` ${target} ` : "文件"}时遇到格式限制，我已经换成更稳定的方式继续生成。`
+    if (active) return `写入${target ? ` ${target} 时` : "文件时"}遇到格式限制，我正在改用更稳定的方式继续生成。`
+    return `写入${target ? ` ${target} 时` : "文件时"}遇到格式限制，我已经换成更稳定的方式继续生成。`
   }
   if (group.key === "verifying") {
     if (active) return "我正在运行检查，确认生成结果能正常打开。"
@@ -305,6 +316,115 @@ function progressEventText(group: ProgressEventGroup) {
   if (group.key === "waiting") return "我正在等待确认信息，确认后会继续执行后续步骤。"
   if (group.key === "error") return "执行时遇到一个底层限制，我正在调整方法继续处理。"
   return "我正在继续处理这一轮任务。"
+}
+
+function progressTextEvents(parts: readonly Part[]) {
+  const result = parts.reduce<{ events: SessionProgressEvent[]; toolCount: number }>(
+    (state, part, index) => {
+      if (part.type === "tool") {
+        return {
+          events: state.events,
+          toolCount: state.toolCount + 1,
+        }
+      }
+      if (part.type !== "text") return state
+
+      const text = progressTextNarrative(part.text)
+      if (!text) return state
+
+      return {
+        events: [
+          ...state.events,
+          {
+            id: `text:${index}:${state.toolCount}`,
+            phase: progressTextPhase(text),
+            detailCount: state.toolCount,
+            status: "done",
+            text,
+          },
+        ],
+        toolCount: state.toolCount,
+      }
+    },
+    { events: [], toolCount: 0 },
+  )
+
+  return result.events
+}
+
+function progressTextNarrative(text: string) {
+  const value = text.trim()
+  const lower = value.toLowerCase()
+  if (!value || isCompletionProcessText(value) || isRawToolSummaryText(lower)) return
+
+  const target = htmlTargetName(value)
+  const targetSuffix = target ? ` ${target}` : ""
+
+  if (/remaining sections|final javascript|insert.*<\/body>|add.*javascript/i.test(value)) {
+    return `我正在补充${targetSuffix || "页面"}剩余内容和交互脚本，把作品写完整。`
+  }
+  if (/write.*chunks|single write|file is too large|bash to create|avoid json/i.test(value)) {
+    return `文件内容较大，我正在改用更稳定的分段写入方式继续生成。`
+  }
+  if (isRawProcessText(lower)) return
+  if (/understand.*structure|existing component|look at.*files|key files|inspect/i.test(value)) {
+    return "我正在查看关键文件和现有结构，确认改动位置。"
+  }
+  if (/sound effects?|game events?|audio context|resume call/i.test(value)) {
+    return "我正在把音效接入到对应的事件里，并处理浏览器音频启用限制。"
+  }
+  if (/test|verify|check|validate/i.test(value)) {
+    return "我正在运行验证，确认生成结果可以稳定使用。"
+  }
+  if (/plan|steps|todo/i.test(value)) {
+    return "我正在把需求拆成可执行步骤，按顺序推进。"
+  }
+  if (/我.*(找到|定位|确认|排查|来源|根因)/.test(value)) {
+    return "我已经定位到问题来源，正在按影响范围调整实现。"
+  }
+  if (/(测试|验证|检查|复现|证明)/.test(value)) {
+    return "我正在补上验证，确认这个行为不会再复现。"
+  }
+  if (/(修改|修复|调整|实现|改到|补充)/.test(value)) {
+    return "我正在把改动落到产品界面，并检查不会影响底层运行路径。"
+  }
+  if (/(写入|生成|创建)/.test(value)) {
+    return `我正在生成${targetSuffix || "作品"}内容，并准备可打开的预览入口。`
+  }
+}
+
+function progressTextPhase(text: string): SessionProgressPhase {
+  if (/(验证|检查|稳定使用|复现)/.test(text)) return "verifying"
+  if (/(补充|生成|写完整|写入|实现|修复|调整)/.test(text)) return "editing"
+  if (/(查看|定位|来源|结构|关键文件)/.test(text)) return "exploring"
+  if (/(拆成|步骤)/.test(text)) return "planning"
+  return "understanding"
+}
+
+function isCompletionProcessText(value: string) {
+  if (/^(done|completed|finished|ready)\b/i.test(value)) return true
+  return /(已|已经)?(完成|创建完成|创建完毕|生成完成|修好|处理完|准备好)/.test(value) || /可以.*(预览|打开|查看|验收)/.test(value)
+}
+
+function isRawProcessText(lower: string) {
+  return (
+    lower.includes("json parsing") ||
+    lower.includes("invalid input for tool") ||
+    lower.includes("filepath") ||
+    lower.includes("cat >") ||
+    lower.includes("bun test") ||
+    lower.includes("error=") ||
+    lower.includes("command=")
+  )
+}
+
+function isRawToolSummaryText(lower: string) {
+  return /^调用了\s+[`'"]?\w+[`'"]?/i.test(lower)
+}
+
+function htmlTargetName(value: string) {
+  const target = value.match(/([^\s"'`<>|&;：，。！？；、]+?\.(?:html|htm))/i)?.[1]
+  return target ? basename(target) : undefined
 }
 
 function describeTool(tool: string, target?: string) {

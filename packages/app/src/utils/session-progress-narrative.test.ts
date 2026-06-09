@@ -44,6 +44,16 @@ function tool(
   } as Part
 }
 
+function text(id: string, value: string): Part {
+  return {
+    id,
+    sessionID: "session_1",
+    messageID: "assistant_1",
+    type: "text",
+    text: value,
+  } as Part
+}
+
 describe("session progress narrative", () => {
   test("starts with an understanding narrative when no tools have run", () => {
     const narrative = buildSessionProgressNarrative({
@@ -259,6 +269,56 @@ describe("session progress narrative", () => {
     expect(text).not.toContain("cat >")
     expect(text).not.toContain("bun test")
     expect(text).not.toContain("JSON parsing")
+  })
+
+  test("rewrites assistant process text into user-readable product progress", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [
+          tool("read", "completed", { filePath: "study-plan.html" }),
+          text("process_1", "Now I need to add the remaining sections and JavaScript."),
+          text("process_2", "Let me write this file in chunks to avoid JSON parsing issues."),
+          tool("bash", "running", { command: "cat > study-plan.html <<'EOF'" }),
+          text("final_1", "学习计划表已创建完成，可以从预览面板打开 study-plan.html。"),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 4000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(textValue).toContain("补充页面剩余内容和交互脚本")
+    expect(textValue).toContain("更稳定的分段写入方式")
+    expect(textValue).not.toContain("Now I")
+    expect(textValue).not.toContain("JSON parsing")
+    expect(textValue).not.toContain("cat >")
+    expect(textValue).not.toContain("学习计划表已创建完成")
+  })
+
+  test("keeps raw localized tool summaries out of rewritten progress text", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [
+          text(
+            "raw_1",
+            '调用了 `invalid` error=Invalid input for tool write: JSON parsing failed: Text: {"filePath":"/srv/zingpop/workspaces/wrk_1/study-plan.html"}',
+          ),
+          text("process_1", "The file is too large for a single write. Let me use bash to create it."),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 4000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(textValue).toContain("更稳定的分段写入方式")
+    expect(textValue).not.toContain("调用了")
+    expect(textValue).not.toContain("filePath")
+    expect(textValue).not.toContain("bash")
   })
 
   test("builds Codex-style user-readable progress without raw execution details", () => {
