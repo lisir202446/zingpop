@@ -26,13 +26,29 @@ function isProgressText(text: string) {
   )
 }
 
-function userFacingText(items: readonly MessagePartRef[]) {
-  return items.filter(hasUserText).filter((item) => item.part.type === "text" && !isProgressText(item.part.text))
+function isImplementationProgressText(text: string) {
+  const value = text.trim()
+  return (
+    /^(i found|i located|i identified|i confirmed|i traced|i checked)\b/i.test(value) &&
+    /\b(root cause|issue|problem|packages\/|src\/|fallback|implementation|file|command|tool|test|build)\b/i.test(value)
+  )
+}
+
+function userFacingText(items: readonly MessagePartRef[], hideImplementationProgress = false) {
+  return items
+    .filter(hasUserText)
+    .filter(
+      (item) =>
+        item.part.type === "text" &&
+        !isProgressText(item.part.text) &&
+        (!hideImplementationProgress || !isImplementationProgressText(item.part.text)),
+    )
 }
 
 export function userFacingTextPartKeys(items: readonly MessagePartRef[]) {
   const lastToolIndex = items.findLastIndex((item) => item.part.type === "tool")
-  const visible = lastToolIndex === -1 ? userFacingText(items).slice(-1) : userFacingText(items.slice(lastToolIndex + 1))
+  const visible =
+    lastToolIndex === -1 ? userFacingText(items).slice(-1) : userFacingText(items.slice(lastToolIndex + 1), true)
 
   return new Set(visible.map((item) => `${item.messageID}:${item.part.id}`))
 }

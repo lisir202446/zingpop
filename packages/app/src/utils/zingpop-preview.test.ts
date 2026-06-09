@@ -177,6 +177,21 @@ describe("zingpop preview utilities", () => {
     ).toBe("study-plan.html")
   })
 
+  test("finds generated html from assistant text with Chinese punctuation prefixes", () => {
+    expect(
+      previewArtifactPathFromParts([
+        {
+          id: "part_1",
+          sessionID: "session_1",
+          messageID: "assistant_1",
+          type: "text",
+          text: "文件已完成：study-plan.html，可以从预览面板打开。",
+          time: { start: 1, end: 2 },
+        },
+      ]),
+    ).toBe("study-plan.html")
+  })
+
   test("keeps the final html target when intermediate assistant text appears before later edits", () => {
     expect(
       previewArtifactPathForTurn({

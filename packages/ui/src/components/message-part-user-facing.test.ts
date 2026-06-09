@@ -48,6 +48,15 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set())
   })
 
+  test("drops English implementation findings after tools instead of showing them as user output", () => {
+    expect(
+      keys([
+        tool("read_1"),
+        text("process_1", "I found the root cause in packages/app top-level Suspense fallback."),
+      ]),
+    ).toEqual(new Set())
+  })
+
   test("keeps final user-facing text after trailing progress text is filtered", () => {
     expect(
       keys([

@@ -112,9 +112,25 @@ function firstString(input: { [key: string]: unknown }, keys: readonly string[])
   return keys.map((key) => input[key]).find((value): value is string => typeof value === "string" && value.length > 0)
 }
 
+function cleanHtmlPathCandidate(value: string | undefined) {
+  if (!value) return
+  const candidate = value
+    .trim()
+    .split(/[：，。！？；、]/)
+    .at(-1)
+    ?.trim()
+  if (!candidate) return
+
+  const withoutAsciiPrefix = /^[A-Za-z]:[\\/]/.test(candidate) ? candidate : (candidate.split(/:/).at(-1) ?? candidate)
+  return withoutAsciiPrefix
+    .replace(/^[\[{(<"'`]+/, "")
+    .replace(/[\]})>"'`，。！？；、,.!?;:]+$/, "")
+    .trim()
+}
+
 function htmlPathsFromText(text: string) {
   return Array.from(text.matchAll(/(?:^|[\s"'`(（])((?:[A-Za-z]:)?[^\s"'`<>()（）]+?\.(?:html|htm))/gi))
-    .map((match) => match[1]?.replace(/[，。！？；：,.!?;:]+$/, ""))
+    .map((match) => cleanHtmlPathCandidate(match[1]))
     .filter((path): path is string => !!path && isZingpopPreviewArtifact(path))
 }
 
