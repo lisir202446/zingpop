@@ -20,6 +20,18 @@ describe("session progress narrative source integration", () => {
     expect(source).toContain("userFacingAssistantOutput={true}")
   })
 
+  test("every workbench session turn uses the Zingpop user-facing progress path", async () => {
+    const source = await Bun.file(new URL("./message-timeline.tsx", import.meta.url)).text()
+    const turnBlocks = source.match(/<SessionTurn[\s\S]*?\/>/g) ?? []
+
+    expect(turnBlocks.length).toBeGreaterThan(0)
+    expect(turnBlocks).toHaveLength(1)
+    expect(turnBlocks[0]).toContain("userFacingAssistantOutput={true}")
+    expect(turnBlocks[0]).toContain("assistantPrefix={")
+    expect(turnBlocks[0]).toContain("<SessionProgressNarrative")
+    expect(turnBlocks[0]).toContain("waiting={active() && waitingForResponse()}")
+  })
+
   test("message timeline shows an inline preview for every html-producing turn", async () => {
     const source = await Bun.file(new URL("./message-timeline.tsx", import.meta.url)).text()
     const previewStart = source.indexOf("<ZingpopPreviewInline")
