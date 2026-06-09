@@ -57,6 +57,19 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set())
   })
 
+  test("keeps Chinese user-facing progress updates between tools", () => {
+    expect(
+      keys([
+        tool("read_1"),
+        text("progress_1", "我找到这个界面的来源了，下一步会调整应用层的加载状态。"),
+        tool("edit_1"),
+        text("progress_2", "我会补一个回归测试，确认发送消息后不会再被全屏加载遮住。"),
+        tool("bash_1"),
+        text("final", "已经修好，可以继续验收。"),
+      ]),
+    ).toEqual(new Set(["assistant_1:progress_1", "assistant_1:progress_2", "assistant_1:final"]))
+  })
+
   test("keeps final user-facing text after trailing progress text is filtered", () => {
     expect(
       keys([

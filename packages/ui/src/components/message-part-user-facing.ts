@@ -46,9 +46,9 @@ function userFacingText(items: readonly MessagePartRef[], hideImplementationProg
 }
 
 export function userFacingTextPartKeys(items: readonly MessagePartRef[]) {
-  const lastToolIndex = items.findLastIndex((item) => item.part.type === "tool")
+  const hasTools = items.some((item) => item.part.type === "tool")
   const visible =
-    lastToolIndex === -1 ? userFacingText(items).slice(-1) : userFacingText(items.slice(lastToolIndex + 1), true)
+    !hasTools ? userFacingText(items).slice(-1) : userFacingText(items, true)
 
   return new Set(visible.map((item) => `${item.messageID}:${item.part.id}`))
 }
