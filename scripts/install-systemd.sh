@@ -111,6 +111,22 @@ else
 fi
 
 install -d /etc/nginx/snippets
+install -d /etc/nginx/sites-available
+install -d /etc/nginx/sites-enabled
+
+if [[ -f "$ROOT_DIR/deploy/nginx/zingpop-app.conf" ]]; then
+  install -m 644 "$ROOT_DIR/deploy/nginx/zingpop-app.conf" /etc/nginx/sites-available/zingpop-app.conf
+  ln -sfn /etc/nginx/sites-available/zingpop-app.conf /etc/nginx/sites-enabled/zingpop-app.conf
+else
+  echo "Missing deploy/nginx/zingpop-app.conf. App host Nginx config was not installed." >&2
+fi
+
+if [[ -f "$ROOT_DIR/deploy/nginx/zingpop-www.conf" ]]; then
+  install -m 644 "$ROOT_DIR/deploy/nginx/zingpop-www.conf" /etc/nginx/sites-available/zingpop-www.conf
+  ln -sfn /etc/nginx/sites-available/zingpop-www.conf /etc/nginx/sites-enabled/zingpop-www.conf
+else
+  echo "Missing deploy/nginx/zingpop-www.conf. Product home Nginx config was not installed." >&2
+fi
 
 OPENCODE_BASIC_USERNAME="$(env_value OPENCODE_SERVER_USERNAME)"
 OPENCODE_BASIC_PASSWORD="$(env_value OPENCODE_SERVER_PASSWORD)"
