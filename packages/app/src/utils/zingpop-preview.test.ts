@@ -176,6 +176,70 @@ describe("zingpop preview utilities", () => {
     ).toBe("study-plan.html")
   })
 
+  test("keeps the final html target when intermediate assistant text appears before later edits", () => {
+    expect(
+      previewArtifactPathForTurn({
+        messageID: "user_1",
+        messages: [
+          { id: "user_1", role: "user" },
+          { id: "assistant_1", role: "assistant", parentID: "user_1" },
+        ],
+        parts: {
+          assistant_1: [
+            {
+              id: "part_1",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_1",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { path: "study-plan.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 1, end: 2 },
+              },
+            },
+            {
+              id: "part_2",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "text",
+              text: "Now I need to add the remaining sections and JavaScript.",
+              time: { start: 3, end: 4 },
+            },
+            {
+              id: "part_3",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_2",
+              tool: "edit",
+              state: {
+                status: "completed",
+                input: { filePath: "study-plan.html" },
+                output: "",
+                title: "edit",
+                metadata: {},
+                time: { start: 5, end: 6 },
+              },
+            },
+            {
+              id: "part_4",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "text",
+              text: "文件已创建完毕。从 Zingpop 预览面板打开 study-plan.html 即可查看。",
+              time: { start: 7, end: 8 },
+            },
+          ],
+        },
+      }),
+    ).toBe("study-plan.html")
+  })
+
   test("finds generated html from a bash fallback command", () => {
     expect(
       previewArtifactPathForTurn({
@@ -322,6 +386,15 @@ describe("zingpop preview utilities", () => {
       name: "parkour-game.html",
       html: "<!doctype html><canvas></canvas>",
     })
+  })
+
+  test("does not treat an empty early html read as a ready preview artifact", () => {
+    expect(
+      previewArtifactFromFileContent("study-plan.html", {
+        type: "text",
+        content: "",
+      }),
+    ).toBeUndefined()
   })
 
   test("does not choose a stale html artifact when the current turn path is unavailable", () => {
@@ -486,6 +559,14 @@ describe("zingpop preview utilities", () => {
         targetArtifact: undefined,
         loading: false,
         attempt: 6,
+      }),
+    ).toBe(3_000)
+    expect(
+      previewTargetReadRetryDelay({
+        targetPath: "game.html",
+        targetArtifact: undefined,
+        loading: false,
+        attempt: 8,
       }),
     ).toBeUndefined()
   })

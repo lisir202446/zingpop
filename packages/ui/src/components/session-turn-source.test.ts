@@ -20,4 +20,11 @@ describe("SessionTurn source", () => {
     expect(source).toContain("userFacingAssistantOutput")
     expect(source).toContain("props.userFacingAssistantOutput")
   })
+
+  test("uses strict final-answer filtering for user-facing assistant output", async () => {
+    const source = await Bun.file(new URL("./message-part.tsx", import.meta.url)).text()
+
+    expect(source).toContain("userFacingTextPartKeys")
+    expect(source).not.toContain("afterTools.length > 0")
+  })
 })

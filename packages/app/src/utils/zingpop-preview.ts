@@ -20,7 +20,7 @@ export type PreviewArtifactPanelState =
   | { type: "loading" }
   | { type: "empty" }
 
-const previewTargetReadRetryDelays = [120, 240, 500, 1_000, 1_500, 2_000] as const
+const previewTargetReadRetryDelays = [120, 240, 500, 1_000, 1_500, 2_000, 3_000, 5_000] as const
 
 type TurnMessage = {
   id: string
@@ -155,6 +155,7 @@ export function previewArtifactFromFileContent(
 ) {
   const normalized = normalizePreviewArtifactPath(path)
   if (!file || file.type !== "text" || !isZingpopPreviewArtifact(normalized)) return
+  if (!file.content.trim()) return
   return {
     path: normalized,
     name: previewArtifactName(normalized),

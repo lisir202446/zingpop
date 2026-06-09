@@ -54,6 +54,7 @@ import { TextShimmer } from "./text-shimmer"
 import { AnimatedCountList } from "./tool-count-summary"
 import { ToolStatusTitle } from "./tool-status-title"
 import { patchFiles } from "./apply-patch-file"
+import { userFacingTextPartKeys } from "./message-part-user-facing"
 import { animate } from "motion"
 import { useLocation } from "@solidjs/router"
 import { attached, inline, kind } from "./message-file"
@@ -614,22 +615,14 @@ export function AssistantParts(props: {
   const userFacingTextPartIDs = createMemo(() => {
     if (!props.userFacingOnly) return
 
-    const items = props.messages.flatMap((message) =>
-      list(data.store.part?.[message.id], emptyParts).map((part) => ({
-        messageID: message.id,
-        part,
-      })),
+    return userFacingTextPartKeys(
+      props.messages.flatMap((message) =>
+        list(data.store.part?.[message.id], emptyParts).map((part) => ({
+          messageID: message.id,
+          part,
+        })),
+      ),
     )
-    const lastToolIndex = items.findLastIndex((item) => item.part.type === "tool")
-    const afterTools = items
-      .slice(lastToolIndex + 1)
-      .filter((item) => item.part.type === "text" && !!item.part.text?.trim())
-    const visible =
-      afterTools.length > 0
-        ? afterTools
-        : items.filter((item) => item.part.type === "text" && !!item.part.text?.trim()).slice(-1)
-
-    return new Set(visible.map((item) => `${item.messageID}:${item.part.id}`))
   })
 
   const grouped = createMemo(

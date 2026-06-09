@@ -10,11 +10,20 @@ export type SessionProgressPhase =
   | "error"
   | "complete"
 
+export type SessionProgressEvent = {
+  id: string
+  phase: SessionProgressPhase
+  detailCount: number
+  status: "done" | "active" | "error"
+  text: string
+}
+
 export type SessionProgressNarrative = {
   phase: SessionProgressPhase
   busy: boolean
   elapsedMs?: number
   detailCount: number
+  events: SessionProgressEvent[]
   lines: string[]
   counts: {
     planning: number
@@ -63,6 +72,7 @@ export function buildSessionProgressNarrative(input: {
       input.now,
     ),
     detailCount: tools.length,
+    events: progressEvents({ phase, tools, busy }),
     counts: {
       planning: countTools(tools, "planning"),
       exploring: countTools(tools, "exploring"),
@@ -164,6 +174,50 @@ function progressLines(input: {
     : ["我已收到这条请求，等待开始处理。"]
 }
 
+function progressEvents(input: { phase: SessionProgressPhase; tools: readonly ToolPart[]; busy: boolean }) {
+  const events = input.tools.flatMap((part, index): SessionProgressEvent[] => {
+    const text = userFacingToolLine(part)[0]
+    if (!text) return []
+    return [
+      {
+        id: `${part.id}:${index}`,
+        phase: toolEventPhase(part),
+        detailCount: index + 1,
+        status: toolEventStatus(part),
+        text,
+      },
+    ]
+  })
+  if (events.length > 0) return events
+
+  return progressLines({
+    phase: input.phase,
+    tools: input.tools,
+    busy: input.busy,
+    detailCount: input.tools.length,
+  }).map(
+    (text, index): SessionProgressEvent => ({
+      id: `empty:${input.phase}:${index}`,
+      phase: input.phase,
+      detailCount: 0,
+      status: input.busy ? "active" : "done",
+      text,
+    }),
+  )
+}
+
+function toolEventPhase(part: ToolPart): SessionProgressPhase {
+  if (part.state.status === "error" && !isRecoverableWriteFormatError(part)) return "error"
+  if (isRecoverableWriteFormatError(part)) return "editing"
+  return toolKind(part.tool)
+}
+
+function toolEventStatus(part: ToolPart): SessionProgressEvent["status"] {
+  if (part.state.status === "error" && !isRecoverableWriteFormatError(part)) return "error"
+  if (part.state.status === "pending" || part.state.status === "running") return "active"
+  return "done"
+}
+
 function describeTool(tool: string, target?: string) {
   if (tool === "bash") return target ? `运行 ${target} 时失败` : "运行命令时失败"
   if (tool === "write" || tool === "edit" || tool === "apply_patch")
@@ -230,6 +284,7 @@ function userFacingToolLine(part: ToolPart) {
   if (isRecoverableWriteFormatError(part)) {
     return ["写入文件时遇到内容格式限制，我正在换一种方式，用更稳定的写入流程继续生成。"]
   }
+  if (part.state.status === "error") return ["执行时遇到一个底层限制，我正在调整方法继续处理。"]
   if (part.tool === "todowrite") return ["我已经把任务拆成步骤，正在按顺序推进。"]
   if (part.tool === "read" || part.tool === "list" || part.tool === "glob" || part.tool === "grep") {
     if (part.state.status === "completed") return ["我已经检查了项目里的相关文件和上下文。"]
@@ -244,6 +299,7 @@ function userFacingToolLine(part: ToolPart) {
     return [`我正在补充${target ? ` ${target}` : "相关文件"}的内容和交互。`]
   }
   if (commandWritesFile(part)) {
+    if (part.state.status === "completed") return ["我已经用更稳定的写入方式生成了文件内容。"]
     return ["我正在用更稳定的写入方式生成文件内容。"]
   }
   if (part.tool === "bash") {
@@ -260,7 +316,6 @@ function userFacingToolLine(part: ToolPart) {
     ]
   }
   if (part.tool === "question") return ["我正在等待确认信息，确认后会继续执行后续步骤。"]
-  if (part.state.status === "error") return ["执行时遇到一个底层限制，我正在调整方法继续处理。"]
   return []
 }
 

@@ -58,9 +58,7 @@ export function SessionProgressNarrative(props: {
             >
               <span
                 class="size-1.5 rounded-full bg-text-weak data-[state=active]:bg-info data-[state=error]:bg-critical"
-                data-state={
-                  narrative().phase === "error" ? "error" : narrative().busy ? "active" : "complete"
-                }
+                data-state={narrative().phase === "error" ? "error" : narrative().busy ? "active" : "complete"}
               />
               {statusText()}
               <Show when={elapsedLabel(narrative().elapsedMs)}>{(label) => <span>{label()}</span>}</Show>
@@ -74,9 +72,23 @@ export function SessionProgressNarrative(props: {
             </Show>
           </div>
 
-          <div class="space-y-2" data-slot="session-progress-narrative-lines">
-            <For each={narrative().lines}>
-              {(line) => <p class="m-0 whitespace-pre-wrap break-words text-14-regular leading-7 text-text-base">{line}</p>}
+          <div class="space-y-4" data-slot="session-progress-narrative-events">
+            <For each={narrative().events}>
+              {(event) => (
+                <div data-slot="session-progress-narrative-event" data-state={event.status} class="space-y-2">
+                  <Show when={event.detailCount > 0}>
+                    <div class="inline-flex items-center gap-1.5 text-12-regular text-text-weak">
+                      <Icon name="terminal" size="small" />
+                      <span>
+                        {event.status === "active" ? "正在运行" : "已运行"} {event.detailCount} 条命令
+                      </span>
+                    </div>
+                  </Show>
+                  <p class="m-0 whitespace-pre-wrap break-words text-14-regular leading-7 text-text-base">
+                    {event.text}
+                  </p>
+                </div>
+              )}
             </For>
           </div>
 
