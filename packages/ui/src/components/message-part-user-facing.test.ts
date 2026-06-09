@@ -57,6 +57,16 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set())
   })
 
+  test("drops raw localized tool-call summaries from user-facing output", () => {
+    expect(
+      keys([
+        tool("write_1"),
+        text("process_1", "调用了 `write` filePath=/srv/zingpop/workspaces/wrk_1/study-plan.html"),
+        text("process_2", "调用了 `read` path=/srv/zingpop/workspaces/wrk_1/study-plan.html"),
+      ]),
+    ).toEqual(new Set())
+  })
+
   test("keeps Chinese user-facing progress updates between tools", () => {
     expect(
       keys([

@@ -104,6 +104,29 @@ describe("zingpop preview utilities", () => {
     ).toBe("parkour.html")
   })
 
+  test("cleans generated html paths from noisy tool path fields", () => {
+    expect(
+      previewArtifactPathFromParts([
+        {
+          id: "part_1",
+          sessionID: "session_1",
+          messageID: "message_1",
+          type: "tool",
+          callID: "call_1",
+          tool: "write",
+          state: {
+            status: "completed",
+            input: { filePath: "/srv/zingpop/workspaces/wrk_1/study-plan.html /" },
+            output: "",
+            title: "write",
+            metadata: {},
+            time: { start: 1, end: 2 },
+          },
+        },
+      ]),
+    ).toBe("/srv/zingpop/workspaces/wrk_1/study-plan.html")
+  })
+
   test("finds the generated html path from the assistant reply for the current turn", () => {
     expect(
       previewArtifactPathForTurn({

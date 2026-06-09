@@ -33,6 +33,13 @@ describe("SessionTurn source", () => {
     expect(showAssistantSource).toContain("userFacingTextPartIDs()?.size")
   })
 
+  test("does not mark live user-facing progress as aria-hidden", async () => {
+    const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
+
+    expect(source).toContain("aria-hidden={props.userFacingAssistantOutput ? false : working()}")
+    expect(source).not.toContain("aria-hidden={working()}")
+  })
+
   test("keeps raw execution details collapsed in user-facing mode", async () => {
     const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
 

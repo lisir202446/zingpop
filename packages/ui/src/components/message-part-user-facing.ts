@@ -16,6 +16,9 @@ function isProgressText(text: string) {
   if (/^(now|let me|i need to|i'll|i will|i can|let's|next,?\s*i|the file is too large|this file is too large)\b/i.test(value)) {
     return true
   }
+  if (/^调用了\s+[`'"]?\w+[`'"]?/.test(value) && /\b(filePath|path|command|error|input|output|tool)=/i.test(value)) {
+    return true
+  }
   return (
     lower.includes("json parsing") ||
     lower.includes("invalid input for tool") ||

@@ -432,7 +432,7 @@ export function SessionTurn(
               </Show>
               {props.assistantPrefix}
               <Show when={showAssistantParts()}>
-                <div data-slot="session-turn-assistant-content" aria-hidden={working()}>
+                <div data-slot="session-turn-assistant-content" aria-hidden={props.userFacingAssistantOutput ? false : working()}>
                   <AssistantParts
                     messages={assistantMessages()}
                     showAssistantCopyPartID={assistantCopyPartID()}

@@ -35,15 +35,6 @@ export function SessionProgressNarrative(props: {
     if (narrative().busy) return "正在处理"
     return "已处理"
   })
-  const countLabels = createMemo(() =>
-    [
-      countLabel("计划", narrative().counts.planning),
-      countLabel("探索", narrative().counts.exploring),
-      countLabel("修改", narrative().counts.editing),
-      countLabel("验证", narrative().counts.verifying),
-      countLabel("等待", narrative().counts.waiting),
-    ].filter((label): label is string => !!label),
-  )
 
   return (
     <Show when={visible()}>
@@ -66,17 +57,6 @@ export function SessionProgressNarrative(props: {
               {statusText()}
               <Show when={elapsedLabel(narrative().elapsedMs)}>{(label) => <span>{label()}</span>}</Show>
             </span>
-            <Show when={countLabels().length > 0}>
-              <div data-slot="session-progress-narrative-counts" class="flex flex-wrap items-center gap-1.5">
-                <For each={countLabels()}>
-                  {(label) => (
-                    <span class="rounded-[8px] bg-background-panel px-2 py-1 text-12-regular text-text-weak">
-                      {label}
-                    </span>
-                  )}
-                </For>
-              </div>
-            </Show>
           </div>
 
           <div class="space-y-4" data-slot="session-progress-narrative-events">
@@ -141,11 +121,6 @@ export function SessionProgressNarrative(props: {
       </section>
     </Show>
   )
-}
-
-function countLabel(label: string, count: number) {
-  if (count <= 0) return
-  return `${label} ${count}`
 }
 
 function todoDone(status: string) {
