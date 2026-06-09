@@ -249,10 +249,6 @@ export function MessageTimeline(props: {
   const platform = usePlatform()
 
   const rendered = createMemo(() => props.renderedUserMessages.map((message) => message.id))
-  const latestRenderedMessageID = createMemo(() => {
-    const messages = rendered()
-    return messages[messages.length - 1]
-  })
   const sessionID = createMemo(() => params.id)
   const sessionMessages = createMemo(() => {
     const id = sessionID()
@@ -1142,7 +1138,7 @@ export function MessageTimeline(props: {
                           container: "w-full px-4 md:px-5",
                         }}
                       />
-                      <Show when={messageID === latestRenderedMessageID()}>
+                      <Show when={previewTargetPath()}>
                         <ZingpopPreviewInline targetPath={previewTargetPath()} />
                       </Show>
                     </div>

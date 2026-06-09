@@ -19,4 +19,14 @@ describe("session progress narrative source integration", () => {
     expect(source).toContain("waiting={active() && waitingForResponse()}")
     expect(source).toContain("userFacingAssistantOutput={true}")
   })
+
+  test("message timeline shows an inline preview for every html-producing turn", async () => {
+    const source = await Bun.file(new URL("./message-timeline.tsx", import.meta.url)).text()
+    const previewStart = source.indexOf("<ZingpopPreviewInline")
+    const localSource = source.slice(Math.max(0, previewStart - 160), previewStart + 160)
+
+    expect(previewStart).toBeGreaterThan(-1)
+    expect(localSource).toContain("<Show when={previewTargetPath()}>")
+    expect(localSource).not.toContain("messageID === latestRenderedMessageID")
+  })
 })
