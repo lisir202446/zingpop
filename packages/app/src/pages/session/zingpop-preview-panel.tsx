@@ -195,7 +195,7 @@ function ZingpopPreviewDockArtifact(props: { artifact: PreviewArtifact }) {
 }
 
 export function ZingpopPreviewDock() {
-  const preview = createZingpopPreviewArtifacts({ manifestFallback: false })
+  const preview = createZingpopPreviewArtifacts({ manifestFallback: true })
 
   return <Show when={preview.first()}>{(artifact) => <ZingpopPreviewDockArtifact artifact={artifact()} />}</Show>
 }

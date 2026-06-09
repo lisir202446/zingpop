@@ -203,7 +203,7 @@ describe("session progress narrative", () => {
     expect(text).not.toContain("JSON parsing")
   })
 
-  test("builds an ordered continuous progress event stream", () => {
+  test("groups low-level tool parts into Codex-style progress paragraphs", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
       messages: [user, assistant],
@@ -225,13 +225,33 @@ describe("session progress narrative", () => {
     })
     const text = narrative.events.map((event) => event.text).join("\n")
 
-    expect(narrative.events.length).toBeGreaterThanOrEqual(4)
-    expect(narrative.events.map((event) => event.detailCount)).toEqual([1, 2, 3, 4, 5])
+    expect(narrative.events.length).toBeLessThan(5)
+    expect(narrative.events.map((event) => event.detailCount)).toEqual([1, 2, 4, 5])
     expect(text).toContain("检查")
     expect(text).toContain("study-plan.html")
     expect(text).toContain("格式限制")
     expect(text).toContain("稳定")
     expect(text).toContain("运行检查")
+    expect(text).not.toContain("cat >")
+    expect(text).not.toContain("bun test")
     expect(text).not.toContain("JSON parsing")
+  })
+
+  test("treats shell file creation as an editing progress step", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [tool("bash", "completed", { command: "cat > study-plan.html <<'EOF'\n<html></html>\nEOF" })],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 4000,
+    })
+
+    expect(narrative.events[0]).toMatchObject({
+      phase: "editing",
+      detailCount: 1,
+    })
+    expect(narrative.events[0]?.text).toContain("study-plan.html")
   })
 })

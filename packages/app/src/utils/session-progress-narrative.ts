@@ -175,19 +175,15 @@ function progressLines(input: {
 }
 
 function progressEvents(input: { phase: SessionProgressPhase; tools: readonly ToolPart[]; busy: boolean }) {
-  const events = input.tools.flatMap((part, index): SessionProgressEvent[] => {
-    const text = userFacingToolLine(part)[0]
-    if (!text) return []
-    return [
-      {
-        id: `${part.id}:${index}`,
-        phase: toolEventPhase(part),
-        detailCount: index + 1,
-        status: toolEventStatus(part),
-        text,
-      },
-    ]
-  })
+  const events = progressEventGroups(input.tools).map(
+    (group, index): SessionProgressEvent => ({
+      id: `${group.key}:${index}:${group.detailCount}`,
+      phase: group.phase,
+      detailCount: group.detailCount,
+      status: groupStatus(group.parts),
+      text: progressEventText(group),
+    }),
+  )
   if (events.length > 0) return events
 
   return progressLines({
@@ -206,16 +202,82 @@ function progressEvents(input: { phase: SessionProgressPhase; tools: readonly To
   )
 }
 
-function toolEventPhase(part: ToolPart): SessionProgressPhase {
+type ProgressEventGroup = {
+  key: string
+  phase: SessionProgressPhase
+  detailCount: number
+  parts: ToolPart[]
+}
+
+function progressEventGroups(tools: readonly ToolPart[]) {
+  return tools.reduce<ProgressEventGroup[]>((result, part, index) => {
+    const key = toolEventGroupKey(part)
+    const previous = result.at(-1)
+    if (previous?.key === key) {
+      return [
+        ...result.slice(0, -1),
+        {
+          ...previous,
+          detailCount: index + 1,
+          parts: [...previous.parts, part],
+        },
+      ]
+    }
+
+    return [
+      ...result,
+      {
+        key,
+        phase: progressEventPhase(key, part),
+        detailCount: index + 1,
+        parts: [part],
+      },
+    ]
+  }, [])
+}
+
+function toolEventGroupKey(part: ToolPart) {
   if (part.state.status === "error" && !isRecoverableWriteFormatError(part)) return "error"
-  if (isRecoverableWriteFormatError(part)) return "editing"
+  if (isRecoverableWriteFormatError(part) || commandWritesFile(part)) return "recovery"
   return toolKind(part.tool)
 }
 
-function toolEventStatus(part: ToolPart): SessionProgressEvent["status"] {
+function progressEventPhase(key: string, part: ToolPart): SessionProgressPhase {
+  if (key === "recovery") return "editing"
   if (part.state.status === "error" && !isRecoverableWriteFormatError(part)) return "error"
-  if (part.state.status === "pending" || part.state.status === "running") return "active"
+  return toolKind(part.tool)
+}
+
+function groupStatus(parts: readonly ToolPart[]): SessionProgressEvent["status"] {
+  if (parts.some((part) => part.state.status === "error" && !isRecoverableWriteFormatError(part))) return "error"
+  if (parts.some((part) => part.state.status === "pending" || part.state.status === "running")) return "active"
   return "done"
+}
+
+function progressEventText(group: ProgressEventGroup) {
+  const target = progressTargetName(group.parts)
+  const active = groupStatus(group.parts) === "active"
+
+  if (group.key === "planning") return "我已经把任务拆成步骤，正在按顺序推进。"
+  if (group.key === "exploring") {
+    if (active) return "我正在检查项目上下文，确认应该在哪些文件里修改。"
+    return `我已经检查了${target ? ` ${target} ` : "项目里的相关文件和上下文"}，确认下一步该改哪里。`
+  }
+  if (group.key === "editing") {
+    if (active) return `我正在更新${target ? ` ${target}` : "目标文件"}，把需求落到可以运行的页面里。`
+    return `我已经更新了${target ? ` ${target}` : "目标文件"}，主要内容已经写入。`
+  }
+  if (group.key === "recovery") {
+    if (active) return `写入${target ? ` ${target} ` : "文件"}时遇到格式限制，我正在改用更稳定的方式继续生成。`
+    return `写入${target ? ` ${target} ` : "文件"}时遇到格式限制，我已经换成更稳定的方式继续生成。`
+  }
+  if (group.key === "verifying") {
+    if (active) return "我正在运行检查，确认生成结果能正常打开。"
+    return "我已经运行检查，确认生成结果可以继续验收。"
+  }
+  if (group.key === "waiting") return "我正在等待确认信息，确认后会继续执行后续步骤。"
+  if (group.key === "error") return "执行时遇到一个底层限制，我正在调整方法继续处理。"
+  return "我正在继续处理这一轮任务。"
 }
 
 function describeTool(tool: string, target?: string) {
@@ -244,6 +306,28 @@ function shortTarget(value: string | undefined) {
 
 function compactLines(lines: readonly string[]) {
   return lines.filter((line, index) => line && lines.indexOf(line) === index)
+}
+
+function progressTargetName(parts: readonly ToolPart[]) {
+  return (
+    parts.map(fileTargetName).findLast((value) => value && /\.(html|htm)\b/i.test(value)) ??
+    parts.map(fileTargetName).findLast(Boolean)
+  )
+}
+
+function fileTargetName(part: ToolPart) {
+  const direct = firstString(part.state.input, ["filePath", "path"])
+  if (direct) return basename(direct)
+
+  const command = firstString(part.state.input, ["command"])
+  const html = command?.match(/([^\s"'`<>|&;]+?\.(?:html|htm))/i)?.[1]
+  if (html) return basename(html)
+
+  return toolTargetName(part)
+}
+
+function basename(value: string) {
+  return value.replace(/^.*[\\/]/, "").replace(/[),.;:，。；：]+$/, "")
 }
 
 function inputText(part: ToolPart) {
