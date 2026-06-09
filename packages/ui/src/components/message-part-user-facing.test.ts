@@ -67,6 +67,18 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set())
   })
 
+  test("drops invalid tool error summaries from user-facing output", () => {
+    expect(
+      keys([
+        tool("write_1"),
+        text(
+          "process_1",
+          '调用了 `invalid` error=Invalid input for tool write: JSON parsing failed: Text: {"filePath":"/srv/zingpop/workspaces/wrk_1/study-plan.html"}',
+        ),
+      ]),
+    ).toEqual(new Set())
+  })
+
   test("hides intermediate Chinese progress because the product narrative owns progress", () => {
     expect(
       keys([

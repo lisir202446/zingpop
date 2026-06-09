@@ -215,6 +215,21 @@ describe("zingpop preview utilities", () => {
     ).toBe("study-plan.html")
   })
 
+  test("finds generated html from localized invalid tool error text", () => {
+    expect(
+      previewArtifactPathFromParts([
+        {
+          id: "part_1",
+          sessionID: "session_1",
+          messageID: "assistant_1",
+          type: "text",
+          text: '调用了 `invalid` error=Invalid input for tool write: JSON parsing failed: Text: {"filePath":"/srv/zingpop/workspaces/wrk_1/study-plan.html"}',
+          time: { start: 1, end: 2 },
+        },
+      ]),
+    ).toBe("/srv/zingpop/workspaces/wrk_1/study-plan.html")
+  })
+
   test("keeps the final html target when intermediate assistant text appears before later edits", () => {
     expect(
       previewArtifactPathForTurn({
