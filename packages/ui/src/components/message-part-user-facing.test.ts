@@ -70,6 +70,22 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set(["assistant_1:progress_1", "assistant_1:progress_2", "assistant_1:final"]))
   })
 
+  test("keeps prompt-guided Chinese progress narration examples", () => {
+    expect(
+      keys([
+        text("understanding", "正在确认要改哪里，避免误动无关文件。"),
+        tool("read_1"),
+        text("located", "已定位到预览触发逻辑，接下来修正 HTML 识别。"),
+        tool("write_1"),
+        text("recovering", "写入方式受限，正在换更稳定的方式。"),
+        tool("bash_1"),
+        text("final", "已完成，可以从预览面板打开 study-plan.html。"),
+      ]),
+    ).toEqual(
+      new Set(["assistant_1:understanding", "assistant_1:located", "assistant_1:recovering", "assistant_1:final"]),
+    )
+  })
+
   test("keeps final user-facing text after trailing progress text is filtered", () => {
     expect(
       keys([
