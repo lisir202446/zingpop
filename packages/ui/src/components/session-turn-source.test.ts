@@ -19,8 +19,17 @@ describe("SessionTurn source", () => {
 
     expect(source).toContain("userFacingAssistantOutput")
     expect(source).toContain("props.userFacingAssistantOutput")
-    expect(source).toContain("if (props.userFacingAssistantOutput && working()) return false")
+    expect(source).toContain("userFacingTextPartIDs()?.size")
     expect(source).toContain("userFacingOnly={props.userFacingAssistantOutput}")
+  })
+
+  test("keeps raw execution details collapsed in user-facing mode", async () => {
+    const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
+
+    expect(source).toContain('data-slot="session-turn-raw-details-toggle"')
+    expect(source).toContain('data-slot="session-turn-raw-details-content"')
+    expect(source).toContain("if (props.userFacingAssistantOutput) return state.rawDetails")
+    expect(source).toContain("showDiffs()")
   })
 
   test("uses strict final-answer filtering for user-facing assistant output", async () => {

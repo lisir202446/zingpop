@@ -26,6 +26,7 @@ import { createAutoScroll } from "../hooks"
 import { useI18n } from "../context/i18n"
 import { normalize } from "./session-diff"
 import { assistantMessagesForTurn } from "./session-turn-helpers"
+import { userFacingTextPartKeys } from "./message-part-user-facing"
 
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)
@@ -254,6 +255,7 @@ export function SessionTurn(
   const [state, setState] = createStore({
     showAll: false,
     expanded: [] as string[],
+    rawDetails: false,
   })
   const showAll = () => state.showAll
   const expanded = () => state.expanded
@@ -356,6 +358,21 @@ export function SessionTurn(
   })
   const assistantVisible = createMemo(() => assistantDerived().visible)
   const reasoningHeading = createMemo(() => assistantDerived().reason)
+  const userFacingTextPartIDs = createMemo(() => {
+    if (!props.userFacingAssistantOutput) return
+
+    return userFacingTextPartKeys(
+      assistantMessages().flatMap((message) =>
+        list(data.store.part?.[message.id], emptyParts).map((part) => ({
+          messageID: message.id,
+          part,
+        })),
+      ),
+    )
+  })
+  const rawDetailCount = createMemo(() =>
+    Math.max(0, assistantVisible() - (userFacingTextPartIDs()?.size ?? 0)) + edited(),
+  )
   const showThinking = createMemo(() => {
     if (props.userFacingAssistantOutput) return false
     if (!working() || !!error()) return false
@@ -364,9 +381,25 @@ export function SessionTurn(
     return true
   })
   const showAssistantParts = createMemo(() => {
-    if (props.userFacingAssistantOutput && working()) return false
-    return assistantMessages().length > 0
+    if (!props.userFacingAssistantOutput) return assistantMessages().length > 0
+    if (working()) return false
+    return (userFacingTextPartIDs()?.size ?? 0) > 0
   })
+  const showRawDetailsToggle = createMemo(
+    () => props.userFacingAssistantOutput && !working() && rawDetailCount() > 0,
+  )
+  const showRawAssistantParts = createMemo(
+    () => props.userFacingAssistantOutput && state.rawDetails && assistantMessages().length > 0,
+  )
+  const showDiffs = createMemo(() => {
+    if (working() || edited() === 0) return false
+    if (props.userFacingAssistantOutput) return state.rawDetails
+    return true
+  })
+  const toggleRawDetails = () => {
+    autoScroll.pause()
+    setState("rawDetails", !state.rawDetails)
+  }
 
   const autoScroll = createAutoScroll({
     working,
@@ -427,7 +460,40 @@ export function SessionTurn(
                 </div>
               </Show>
               <SessionRetry status={status()} show={active()} />
-              <Show when={edited() > 0 && !working()}>
+              <Show when={showRawDetailsToggle()}>
+                <div class="mt-2">
+                  <button
+                    type="button"
+                    data-slot="session-turn-raw-details-toggle"
+                    class="inline-flex items-center gap-1.5 rounded-[8px] border border-border-weak-base bg-background-base px-2.5 py-1 text-12-regular text-text-weak hover:text-text-base hover:border-border-base"
+                    aria-expanded={state.rawDetails}
+                    onClick={toggleRawDetails}
+                  >
+                    <Icon
+                      name="chevron-down"
+                      size="small"
+                      class="transition-transform data-[expanded=false]:-rotate-90"
+                      data-expanded={state.rawDetails}
+                    />
+                    <span>{state.rawDetails ? "收起原始执行记录" : "查看原始执行记录"}</span>
+                    <span>{rawDetailCount()} 条</span>
+                  </button>
+                </div>
+              </Show>
+              <Show when={showRawAssistantParts()}>
+                <div data-slot="session-turn-raw-details-content" class="mt-2">
+                  <AssistantParts
+                    messages={assistantMessages()}
+                    showAssistantCopyPartID={assistantCopyPartID()}
+                    turnDurationMs={turnDurationMs()}
+                    working={false}
+                    showReasoningSummaries={showReasoningSummaries()}
+                    shellToolDefaultOpen={props.shellToolDefaultOpen}
+                    editToolDefaultOpen={props.editToolDefaultOpen}
+                  />
+                </div>
+              </Show>
+              <Show when={showDiffs()}>
                 <div
                   data-slot="session-turn-diffs"
                   data-component="session-turn-diffs-group"

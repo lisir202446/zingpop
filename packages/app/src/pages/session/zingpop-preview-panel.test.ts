@@ -10,4 +10,13 @@ describe("Zingpop preview panel source", () => {
     expect(dockSource).toContain("preview.pending()")
     expect(source).toContain("正在准备 HTML 预览")
   })
+
+  test("shows a pending inline preview entry while the generated html is still loading", async () => {
+    const source = await Bun.file(new URL("./zingpop-preview-panel.tsx", import.meta.url)).text()
+    const inlineStart = source.indexOf("export function ZingpopPreviewInline")
+    const inlineSource = source.slice(inlineStart, source.indexOf("function ZingpopPreviewDockPending"))
+
+    expect(inlineSource).toContain("preview.pending()")
+    expect(inlineSource).toContain("ZingpopPreviewDockPending")
+  })
 })

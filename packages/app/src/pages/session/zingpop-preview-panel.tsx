@@ -159,7 +159,14 @@ function createZingpopPreviewArtifacts(
 export function ZingpopPreviewInline(props: { targetPath?: string }) {
   const preview = createZingpopPreviewArtifacts({ targetPath: () => props.targetPath, manifestFallback: false })
 
-  return <Show when={preview.first()}>{(artifact) => <ZingpopPreviewBrowserCard artifact={artifact()} />}</Show>
+  return (
+    <Show
+      when={preview.first()}
+      fallback={<Show when={preview.pending()}>{(artifact) => <ZingpopPreviewDockPending artifact={artifact()} />}</Show>}
+    >
+      {(artifact) => <ZingpopPreviewBrowserCard artifact={artifact()} />}
+    </Show>
+  )
 }
 
 function ZingpopPreviewDockPending(props: { artifact: PreviewArtifact }) {
