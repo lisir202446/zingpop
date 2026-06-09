@@ -31,6 +31,19 @@ describe("production bun install", () => {
     expect(build).toContain("packages/app/dist/zingpop-build.json")
   })
 
+  test("production workbench build verifies user-facing UX markers before install", async () => {
+    const build = await Bun.file(new URL("scripts/production-build.sh", repo)).text()
+    const probe = await Bun.file(new URL("scripts/production-ux-probe.mjs", repo)).text()
+
+    expect(build).toContain("scripts/production-ux-probe.mjs")
+    expect(build).toContain("--expected-commit")
+    expect(build).toContain("--skip-remote")
+    expect(probe).toContain("session-progress-narrative")
+    expect(probe).toContain("userFacingAssistantOutput")
+    expect(probe).toContain("session-turn-raw-details-toggle")
+    expect(probe).toContain("正在准备 HTML 预览")
+  })
+
   test("installer avoids stale cache tarballs and verifies critical packages", async () => {
     const install = await Bun.file(new URL("scripts/production-bun-install.sh", repo)).text()
 
