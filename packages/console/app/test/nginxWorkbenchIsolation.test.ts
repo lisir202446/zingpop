@@ -70,6 +70,7 @@ describe("nginx workbench isolation", () => {
       "/favicon-96x96-v3.png",
       "/apple-touch-icon-v3.png",
       "/oc-theme-preload.js",
+      "/zingpop-build.json",
     ]
 
     for (const file of staticFiles) {
@@ -79,5 +80,15 @@ describe("nginx workbench isolation", () => {
       expect(block).not.toContain("auth_request")
       expect(block).not.toContain("@zingpop_login")
     }
+  })
+
+  test("serves the workbench build marker without long immutable caching", () => {
+    const block = locationBlock("/zingpop-build.json")
+
+    expect(block).toContain("root /opt/zingpop/app/dist;")
+    expect(block).toContain("try_files $uri =404;")
+    expect(block).toContain('add_header Cache-Control "no-store";')
+    expect(block).not.toContain("auth_request")
+    expect(block).not.toContain("@zingpop_login")
   })
 })

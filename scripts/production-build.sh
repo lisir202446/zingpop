@@ -23,6 +23,11 @@ fi
 # the workbench and backend on one origin in production.
 bun run --cwd packages/opencode build "${OPENCODE_BUILD_ARGS[@]}"
 
+BUILD_COMMIT="${ZINGPOP_BUILD_COMMIT:-$(git rev-parse HEAD 2>/dev/null || echo unknown)}"
+BUILD_TIME="${ZINGPOP_BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+mkdir -p packages/app/dist
+printf '{\n  "commit": "%s",\n  "builtAt": "%s"\n}\n' "$BUILD_COMMIT" "$BUILD_TIME" > packages/app/dist/zingpop-build.json
+
 # Product home build is separate from the opencode workbench.
 rm -rf \
   packages/console/app/.output \

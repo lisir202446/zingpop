@@ -23,6 +23,14 @@ describe("production bun install", () => {
     expect(build).toContain("export VITE_ZINGPOP_HOSTED_WORKBENCH=1")
   })
 
+  test("production workbench build writes a public commit marker", async () => {
+    const build = await Bun.file(new URL("scripts/production-build.sh", repo)).text()
+
+    expect(build).toContain("BUILD_COMMIT=")
+    expect(build).toContain("BUILD_TIME=")
+    expect(build).toContain("packages/app/dist/zingpop-build.json")
+  })
+
   test("installer avoids stale cache tarballs and verifies critical packages", async () => {
     const install = await Bun.file(new URL("scripts/production-bun-install.sh", repo)).text()
 
