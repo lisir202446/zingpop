@@ -57,6 +57,20 @@ describe("production bun install", () => {
     expect(install).toContain("/etc/nginx/sites-enabled/zingpop-www.conf")
   })
 
+  test("server deploy script falls back to GitHub codeload and verifies production UX", async () => {
+    const deploy = await Bun.file(new URL("scripts/deploy-production-from-github.sh", repo)).text()
+
+    expect(deploy).toContain("git -C \"$REPO\"")
+    expect(deploy).toContain("https://codeload.github.com/$GITHUB_REPO/tar.gz/$COMMIT")
+    expect(deploy).toContain("tar -xzf \"$archive\" -C \"$workdir\" --strip-components=1")
+    expect(deploy).toContain("ZINGPOP_BUILD_COMMIT=\"$COMMIT\"")
+    expect(deploy).toContain("./scripts/production-build.sh")
+    expect(deploy).toContain("./scripts/install-systemd.sh")
+    expect(deploy).toContain("systemctl restart zingpop-opencode zingpop-console")
+    expect(deploy).toContain("scripts/production-ux-probe.mjs")
+    expect(deploy).toContain("DEPLOY_DONE $COMMIT")
+  })
+
   test("installer avoids stale cache tarballs and verifies critical packages", async () => {
     const install = await Bun.file(new URL("scripts/production-bun-install.sh", repo)).text()
 
