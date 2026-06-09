@@ -22,7 +22,12 @@ const completedAssistant = {
   time: { created: 1100, completed: 1800 },
 } as Message
 
-function tool(tool: string, status: "running" | "completed" | "error", input: Record<string, unknown> = {}): Part {
+function tool(
+  tool: string,
+  status: "running" | "completed" | "error",
+  input: Record<string, unknown> = {},
+  metadata: Record<string, unknown> = {},
+): Part {
   return {
     id: `part_${tool}_${status}`,
     sessionID: "session_1",
@@ -32,10 +37,10 @@ function tool(tool: string, status: "running" | "completed" | "error", input: Re
     tool,
     state:
       status === "completed"
-        ? { status, input, output: "", title: tool, metadata: {}, time: { start: 1200, end: 1300 } }
+        ? { status, input, output: "", title: tool, metadata, time: { start: 1200, end: 1300 } }
         : status === "error"
-          ? { status, input, error: "failed", metadata: {}, time: { start: 1200, end: 1300 } }
-          : { status, input, metadata: {}, time: { start: 1200 } },
+          ? { status, input, error: "failed", metadata, time: { start: 1200, end: 1300 } }
+          : { status, input, metadata, time: { start: 1200 } },
   } as Part
 }
 
@@ -256,5 +261,36 @@ describe("session progress narrative", () => {
       detailCount: 1,
     })
     expect(narrative.events[0]?.text).toContain("study-plan.html")
+  })
+
+  test("summarizes the latest task list for user-facing progress", () => {
+    const todos = [
+      { content: "搭建页面结构", status: "completed", priority: "high" },
+      { content: "补充交互逻辑", status: "in_progress", priority: "high" },
+      { content: "验证预览入口", status: "pending", priority: "medium" },
+    ]
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [
+          tool("todowrite", "completed", { todos }),
+          tool("edit", "running", { filePath: "study-plan.html" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 4000,
+    })
+
+    expect(narrative.todo).toMatchObject({
+      total: 3,
+      done: 1,
+      active: "补充交互逻辑",
+    })
+    expect(narrative.todo?.items.map((item) => item.content)).toEqual([
+      "搭建页面结构",
+      "补充交互逻辑",
+      "验证预览入口",
+    ])
   })
 })

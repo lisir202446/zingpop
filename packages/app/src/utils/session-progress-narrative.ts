@@ -18,6 +18,18 @@ export type SessionProgressEvent = {
   text: string
 }
 
+export type SessionProgressTodoItem = {
+  content: string
+  status: "pending" | "in_progress" | "completed" | "cancelled"
+}
+
+export type SessionProgressTodo = {
+  total: number
+  done: number
+  active?: string
+  items: SessionProgressTodoItem[]
+}
+
 export type SessionProgressNarrative = {
   phase: SessionProgressPhase
   busy: boolean
@@ -25,6 +37,7 @@ export type SessionProgressNarrative = {
   detailCount: number
   events: SessionProgressEvent[]
   lines: string[]
+  todo?: SessionProgressTodo
   counts: {
     planning: number
     exploring: number
@@ -61,6 +74,7 @@ export function buildSessionProgressNarrative(input: {
   })
   const waitingCount = countTools(tools, "waiting")
   const events = progressEvents({ phase, tools, busy })
+  const todo = progressTodo(tools)
 
   return {
     phase,
@@ -81,6 +95,7 @@ export function buildSessionProgressNarrative(input: {
     },
     events,
     lines: events.map((event) => event.text),
+    todo,
   }
 }
 
@@ -293,6 +308,53 @@ function toolTarget(part: ToolPart) {
 
 function firstString(input: Record<string, unknown>, keys: readonly string[]) {
   return keys.map((key) => input[key]).find((value): value is string => typeof value === "string" && value.length > 0)
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+function todoStatus(value: unknown): SessionProgressTodoItem["status"] | undefined {
+  if (value === "pending" || value === "in_progress" || value === "completed" || value === "cancelled") return value
+}
+
+function todoItem(value: unknown): SessionProgressTodoItem | undefined {
+  if (!record(value)) return
+  if (typeof value.content !== "string" || value.content.trim().length === 0) return
+  const status = todoStatus(value.status)
+  if (!status) return
+  return {
+    content: value.content.trim(),
+    status,
+  }
+}
+
+function todoItems(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value.map(todoItem).filter((item): item is SessionProgressTodoItem => !!item)
+}
+
+function progressTodo(tools: readonly ToolPart[]): SessionProgressTodo | undefined {
+  const items = tools
+    .filter((part) => part.tool === "todowrite")
+    .map((part) => {
+      const metadata = "metadata" in part.state && record(part.state.metadata) ? part.state.metadata.todos : undefined
+      const fromMetadata = todoItems(metadata)
+      if (fromMetadata.length > 0) return fromMetadata
+      return todoItems(part.state.input.todos)
+    })
+    .findLast((list) => list.length > 0)
+
+  if (!items) return
+
+  return {
+    total: items.length,
+    done: items.filter((item) => item.status === "completed" || item.status === "cancelled").length,
+    active:
+      items.find((item) => item.status === "in_progress")?.content ??
+      items.find((item) => item.status === "pending")?.content,
+    items,
+  }
 }
 
 function shortTarget(value: string | undefined) {

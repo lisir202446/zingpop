@@ -35,6 +35,15 @@ export function SessionProgressNarrative(props: {
     if (narrative().busy) return "正在处理"
     return "已处理"
   })
+  const countLabels = createMemo(() =>
+    [
+      countLabel("计划", narrative().counts.planning),
+      countLabel("探索", narrative().counts.exploring),
+      countLabel("修改", narrative().counts.editing),
+      countLabel("验证", narrative().counts.verifying),
+      countLabel("等待", narrative().counts.waiting),
+    ].filter((label): label is string => !!label),
+  )
 
   return (
     <Show when={visible()}>
@@ -57,6 +66,17 @@ export function SessionProgressNarrative(props: {
               {statusText()}
               <Show when={elapsedLabel(narrative().elapsedMs)}>{(label) => <span>{label()}</span>}</Show>
             </span>
+            <Show when={countLabels().length > 0}>
+              <div data-slot="session-progress-narrative-counts" class="flex flex-wrap items-center gap-1.5">
+                <For each={countLabels()}>
+                  {(label) => (
+                    <span class="rounded-[8px] bg-background-panel px-2 py-1 text-12-regular text-text-weak">
+                      {label}
+                    </span>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
 
           <div class="space-y-4" data-slot="session-progress-narrative-events">
@@ -78,10 +98,58 @@ export function SessionProgressNarrative(props: {
               )}
             </For>
           </div>
+
+          <Show when={narrative().todo}>
+            {(todo) => (
+              <div
+                data-slot="session-progress-narrative-todo"
+                class="max-w-[620px] rounded-[8px] border border-border-weak-base bg-background-panel px-3 py-2.5"
+              >
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-13-medium text-text-base">
+                  <span>
+                    已完成 {todo().done} 个任务（共 {todo().total} 个）
+                  </span>
+                  <Show when={todo().active}>
+                    {(active) => <span class="text-12-regular text-text-weak">当前正在处理：{active()}</span>}
+                  </Show>
+                </div>
+                <div class="mt-2 space-y-1.5">
+                  <For each={todo().items.slice(0, 8)}>
+                    {(item) => (
+                      <div class="flex items-start gap-2 text-13-regular leading-5 text-text-base">
+                        <span
+                          aria-hidden="true"
+                          class="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-border-base text-[10px] text-text-weak data-[done=true]:border-success data-[done=true]:bg-success data-[done=true]:text-background-base"
+                          data-done={todoDone(item.status)}
+                        >
+                          <Show when={todoDone(item.status)}>✓</Show>
+                        </span>
+                        <span
+                          class="min-w-0 break-words data-[done=true]:text-text-weak data-[done=true]:line-through"
+                          data-done={todoDone(item.status)}
+                        >
+                          {item.content}
+                        </span>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            )}
+          </Show>
         </div>
       </section>
     </Show>
   )
+}
+
+function countLabel(label: string, count: number) {
+  if (count <= 0) return
+  return `${label} ${count}`
+}
+
+function todoDone(status: string) {
+  return status === "completed" || status === "cancelled"
 }
 
 function elapsedLabel(value: number | undefined) {
