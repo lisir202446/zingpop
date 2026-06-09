@@ -5,6 +5,8 @@ describe("SessionProgressNarrative", () => {
     const source = await Bun.file(new URL("./session-progress-narrative.tsx", import.meta.url)).text()
 
     expect(source).toContain('data-component="session-progress-narrative"')
+    expect(source).toContain('aria-live={narrative().busy ? "polite" : "off"}')
+    expect(source).toContain("aria-busy={narrative().busy}")
     expect(source).toContain("break-words")
     expect(source).toContain("正在处理")
     expect(source).toContain('props.status?.type !== "busy" && props.status?.type !== "retry"')

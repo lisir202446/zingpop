@@ -38,7 +38,12 @@ export function SessionProgressNarrative(props: {
 
   return (
     <Show when={visible()}>
-      <section data-component="session-progress-narrative" class="w-full px-4 md:px-5 pb-3">
+      <section
+        data-component="session-progress-narrative"
+        aria-live={narrative().busy ? "polite" : "off"}
+        aria-busy={narrative().busy}
+        class="w-full px-4 md:px-5 pb-3"
+      >
         <div class="max-w-[780px] space-y-3 text-text-base">
           <div class="flex flex-wrap items-center gap-2">
             <span

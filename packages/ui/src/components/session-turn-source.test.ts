@@ -19,6 +19,8 @@ describe("SessionTurn source", () => {
 
     expect(source).toContain("userFacingAssistantOutput")
     expect(source).toContain("props.userFacingAssistantOutput")
+    expect(source).toContain("if (props.userFacingAssistantOutput && working()) return false")
+    expect(source).toContain("userFacingOnly={props.userFacingAssistantOutput}")
   })
 
   test("uses strict final-answer filtering for user-facing assistant output", async () => {
