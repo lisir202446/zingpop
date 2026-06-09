@@ -23,6 +23,16 @@ describe("SessionTurn source", () => {
     expect(source).toContain("userFacingOnly={props.userFacingAssistantOutput}")
   })
 
+  test("shows filtered user-facing assistant progress while the turn is still working", async () => {
+    const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
+    const showAssistantStart = source.indexOf("const showAssistantParts")
+    const showAssistantSource = source.slice(showAssistantStart, source.indexOf("const showRawDetailsToggle"))
+
+    expect(showAssistantStart).toBeGreaterThan(-1)
+    expect(showAssistantSource).not.toContain("if (working()) return false")
+    expect(showAssistantSource).toContain("userFacingTextPartIDs()?.size")
+  })
+
   test("keeps raw execution details collapsed in user-facing mode", async () => {
     const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
 

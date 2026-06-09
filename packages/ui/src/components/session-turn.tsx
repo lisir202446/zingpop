@@ -382,7 +382,6 @@ export function SessionTurn(
   })
   const showAssistantParts = createMemo(() => {
     if (!props.userFacingAssistantOutput) return assistantMessages().length > 0
-    if (working()) return false
     return (userFacingTextPartIDs()?.size ?? 0) > 0
   })
   const showRawDetailsToggle = createMemo(
