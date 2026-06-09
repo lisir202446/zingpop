@@ -59,8 +59,8 @@ export function buildSessionProgressNarrative(input: {
     waiting: input.waiting === true,
     toolCount: tools.length,
   })
-  const target = active ? toolTarget(active) : undefined
   const waitingCount = countTools(tools, "waiting")
+  const events = progressEvents({ phase, tools, busy })
 
   return {
     phase,
@@ -72,7 +72,6 @@ export function buildSessionProgressNarrative(input: {
       input.now,
     ),
     detailCount: tools.length,
-    events: progressEvents({ phase, tools, busy }),
     counts: {
       planning: countTools(tools, "planning"),
       exploring: countTools(tools, "exploring"),
@@ -80,7 +79,8 @@ export function buildSessionProgressNarrative(input: {
       verifying: countTools(tools, "verifying"),
       waiting: input.waiting ? Math.max(waitingCount, 1) : waitingCount,
     },
-    lines: progressLines({ phase, target, tool: active?.tool, tools, busy, detailCount: tools.length }),
+    events,
+    lines: events.map((event) => event.text),
   }
 }
 
@@ -140,7 +140,7 @@ function progressLines(input: {
   const recent = compactLines(input.tools.flatMap(userFacingToolLine)).slice(-4)
   if (input.phase === "error") {
     return [
-      `遇到错误：${input.tool ? describeTool(input.tool, input.target) : "执行过程失败"}。可以展开详细执行记录查看原始输出。`,
+      `遇到错误：${input.tool ? describeTool(input.tool, input.target) : "执行过程失败"}。我会调整处理方式继续推进。`,
     ]
   }
   if (recent.length > 0 && input.phase !== "complete") {
@@ -162,9 +162,7 @@ function progressLines(input: {
     return ["我正在等待确认信息，确认后会继续执行后续步骤。"]
   }
   if (input.phase === "complete") {
-    return [`本轮工作已完成，保留了 ${input.detailCount} 条详细执行记录，可展开核查原始工具输出。`, ...recent].filter(
-      (line) => line.length > 0,
-    )
+    return [`本轮工作已完成，共推进了 ${input.detailCount} 个执行步骤。`, ...recent].filter((line) => line.length > 0)
   }
   return input.busy
     ? [

@@ -4,6 +4,7 @@ import {
   loadZingpopPreviewArtifacts,
   normalizePreviewArtifactPath,
   previewArtifactFromFileContent,
+  previewArtifactFromPath,
   previewArtifactName,
   previewArtifactPanelState,
   previewArtifactPathForDirectory,
@@ -386,6 +387,16 @@ describe("zingpop preview utilities", () => {
       name: "parkour-game.html",
       html: "<!doctype html><canvas></canvas>",
     })
+  })
+
+  test("builds an optimistic preview artifact from a known html target path", () => {
+    expect(previewArtifactFromPath("project_1", "nested\\study-plan.html")).toMatchObject({
+      path: "nested/study-plan.html",
+      name: "study-plan.html",
+      url: "/_zingpop/preview/project_1/nested/study-plan.html",
+      fileUrl: "/_zingpop/preview-file/project_1/nested/study-plan.html",
+    })
+    expect(previewArtifactFromPath("project_1", "notes.txt")).toBeUndefined()
   })
 
   test("does not treat an empty early html read as a ready preview artifact", () => {

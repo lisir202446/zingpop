@@ -38,6 +38,26 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set(["assistant_1:final"]))
   })
 
+  test("drops low-level progress text even when it appears after the last tool", () => {
+    expect(
+      keys([
+        tool("write_1"),
+        text("process_1", "Let me write this file in chunks to avoid JSON parsing issues."),
+        text("process_2", "The file is too large for a single write. Let me use bash to create it."),
+      ]),
+    ).toEqual(new Set())
+  })
+
+  test("keeps final user-facing text after trailing progress text is filtered", () => {
+    expect(
+      keys([
+        tool("write_1"),
+        text("process_1", "Now I need to add the remaining sections and JavaScript."),
+        text("final", "学习计划表已创建完成，可以从预览面板打开 study-plan.html。"),
+      ]),
+    ).toEqual(new Set(["assistant_1:final"]))
+  })
+
   test("hides intermediate process text when no final answer followed the last tool", () => {
     expect(
       keys([

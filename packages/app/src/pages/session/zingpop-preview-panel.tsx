@@ -25,6 +25,7 @@ import { isZingpopHostedWorkbench } from "@/utils/zingpop-host"
 import {
   loadZingpopPreviewArtifacts,
   previewArtifactFromFileContent,
+  previewArtifactFromPath,
   previewArtifactPanelState,
   previewArtifactPathForDirectory,
   previewArtifactPathForLatestTurn,
@@ -86,6 +87,13 @@ function createZingpopPreviewArtifacts(
       loading: artifacts.loading && !artifacts(),
     }),
   )
+  const pending = createMemo(() => {
+    if (first()) return
+    const path = targetPath()
+    const project = projectID()
+    if (!path || !project) return
+    return previewArtifactFromPath(project, path)
+  })
   const status = createMemo(() => (params.id ? (sync.data.session_status[params.id] ?? idle) : idle))
   let refreshTimer: number | undefined
   let targetRetryTimer: number | undefined
@@ -135,9 +143,11 @@ function createZingpopPreviewArtifacts(
 
   return {
     projectID,
+    targetPath,
     artifacts,
     entries,
     first,
+    pending,
     panel,
     refetch: () => {
       if (targetPath()) void refetchTargetArtifact()
@@ -150,6 +160,40 @@ export function ZingpopPreviewInline(props: { targetPath?: string }) {
   const preview = createZingpopPreviewArtifacts({ targetPath: () => props.targetPath, manifestFallback: false })
 
   return <Show when={preview.first()}>{(artifact) => <ZingpopPreviewBrowserCard artifact={artifact()} />}</Show>
+}
+
+function ZingpopPreviewDockPending(props: { artifact: PreviewArtifact }) {
+  const artifact = () => props.artifact
+  const openHref = createPreviewOpenUrl(artifact)
+
+  return (
+    <div class="mb-2 flex w-full flex-col gap-2 rounded-md border border-border-weak-base bg-background-base px-3 py-2 shadow-sm sm:flex-row sm:items-center">
+      <div class="min-w-0 flex-1">
+        <div class="text-12-medium text-text-strong">正在准备 HTML 预览</div>
+        <a
+          href={openHref() || "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block truncate text-12-regular text-text-base hover:text-text-strong"
+        >
+          {artifact().name}
+        </a>
+      </div>
+      <div class="flex shrink-0 gap-2">
+        <Button
+          as="a"
+          href={openHref() || "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          size="small"
+          variant="secondary"
+          icon="open-file"
+        >
+          打开预览
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 function ZingpopPreviewDockArtifact(props: { artifact: PreviewArtifact }) {
@@ -197,7 +241,14 @@ function ZingpopPreviewDockArtifact(props: { artifact: PreviewArtifact }) {
 export function ZingpopPreviewDock() {
   const preview = createZingpopPreviewArtifacts({ manifestFallback: true })
 
-  return <Show when={preview.first()}>{(artifact) => <ZingpopPreviewDockArtifact artifact={artifact()} />}</Show>
+  return (
+    <Show
+      when={preview.first()}
+      fallback={<Show when={preview.pending()}>{(artifact) => <ZingpopPreviewDockPending artifact={artifact()} />}</Show>}
+    >
+      {(artifact) => <ZingpopPreviewDockArtifact artifact={artifact()} />}
+    </Show>
+  )
 }
 
 function ZingpopPreviewPanelArtifact(props: { artifact: PreviewArtifact; entries: PreviewArtifact[] }) {

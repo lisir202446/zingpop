@@ -87,7 +87,7 @@ describe("session progress narrative", () => {
     })
 
     expect(narrative.phase).toBe("error")
-    expect(narrative.lines[0]).toContain("遇到错误")
+    expect(narrative.lines[0]).toContain("底层限制")
   })
 
   test("prioritizes pending user confirmation over active tool progress", () => {
@@ -137,7 +137,9 @@ describe("session progress narrative", () => {
     })
 
     expect(narrative.phase).toBe("complete")
-    expect(narrative.lines[0]).toContain("已完成")
+    expect(narrative.lines.join("\n")).toContain("更新")
+    expect(narrative.lines.join("\n")).toContain("运行检查")
+    expect(narrative.lines.join("\n")).not.toContain("详细执行记录")
   })
   test("uses current time only while the turn is active", () => {
     const narrative = buildSessionProgressNarrative({
@@ -163,7 +165,7 @@ describe("session progress narrative", () => {
     expect(narrative.elapsedMs).toBe(800)
   })
 
-  test("shortens long tool targets before rendering narrative lines", () => {
+  test("keeps narrative lines free of raw shell commands", () => {
     const command = `bun test ${"very-long-segment".repeat(20)}`
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
@@ -174,8 +176,9 @@ describe("session progress narrative", () => {
     })
     const line = narrative.lines.join("\n")
 
-    expect(line).toContain("...")
     expect(line.length).toBeLessThan(command.length)
+    expect(line).not.toContain("bun test")
+    expect(line).toContain("运行检查")
   })
 
   test("explains recoverable write formatting errors in user-facing language", () => {
@@ -199,7 +202,7 @@ describe("session progress narrative", () => {
 
     expect(narrative.phase).not.toBe("error")
     expect(text).toContain("格式限制")
-    expect(text).toContain("换一种方式")
+    expect(text).toContain("更稳定")
     expect(text).not.toContain("JSON parsing")
   })
 

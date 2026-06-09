@@ -96,6 +96,18 @@ export function previewArtifactName(path: string) {
   return normalizePreviewArtifactPath(path).split("/").pop() || path
 }
 
+export function previewArtifactFromPath(projectID: string, path: string) {
+  const normalized = normalizePreviewArtifactPath(path)
+  if (!projectID || !isZingpopPreviewArtifact(normalized)) return
+  return {
+    path: normalized,
+    name: previewArtifactName(normalized),
+    url: zingpopPreviewUrl(projectID, normalized),
+    fileUrl: zingpopPreviewFileUrl(projectID, normalized),
+    timeUpdated: Date.now(),
+  } satisfies PreviewArtifact
+}
+
 function firstString(input: { [key: string]: unknown }, keys: readonly string[]) {
   return keys.map((key) => input[key]).find((value): value is string => typeof value === "string" && value.length > 0)
 }

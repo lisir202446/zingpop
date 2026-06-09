@@ -7,5 +7,7 @@ describe("Zingpop preview panel source", () => {
     const dockSource = source.slice(dockStart, source.indexOf("function ZingpopPreviewPanelArtifact"))
 
     expect(dockSource).toContain("createZingpopPreviewArtifacts({ manifestFallback: true })")
+    expect(dockSource).toContain("preview.pending()")
+    expect(source).toContain("正在准备 HTML 预览")
   })
 })
