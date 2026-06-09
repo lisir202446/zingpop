@@ -73,18 +73,19 @@ export function buildSessionProgressNarrative(input: {
     toolCount: tools.length,
   })
   const waitingCount = countTools(tools, "waiting")
-  const events = progressEvents({ phase, tools, busy })
+  const elapsed = elapsedMs(
+    input.messages.find((message) => message.id === input.messageID),
+    assistantMessages,
+    busy,
+    input.now,
+  )
+  const events = progressEvents({ phase, tools, busy, elapsedMs: elapsed })
   const todo = progressTodo(tools)
 
   return {
     phase,
     busy,
-    elapsedMs: elapsedMs(
-      input.messages.find((message) => message.id === input.messageID),
-      assistantMessages,
-      busy,
-      input.now,
-    ),
+    elapsedMs: elapsed,
     detailCount: tools.length,
     counts: {
       planning: countTools(tools, "planning"),
@@ -151,6 +152,7 @@ function progressLines(input: {
   tools: readonly ToolPart[]
   busy: boolean
   detailCount: number
+  elapsedMs?: number
 }) {
   const recent = compactLines(input.tools.flatMap(userFacingToolLine)).slice(-4)
   if (input.phase === "error") {
@@ -179,6 +181,12 @@ function progressLines(input: {
   if (input.phase === "complete") {
     return [`本轮工作已完成，共推进了 ${input.detailCount} 个执行步骤。`, ...recent].filter((line) => line.length > 0)
   }
+  if (input.phase === "understanding" && input.busy && (input.elapsedMs ?? 0) >= 15_000) {
+    return [
+      "模型还在生成执行步骤，我会继续等待它返回可执行动作。",
+      "一旦开始读取、修改或验证，我会继续更新当前进展。",
+    ]
+  }
   return input.busy
     ? [
         "我正在理解你想做的内容，并判断需要产出什么文件或页面。",
@@ -187,7 +195,12 @@ function progressLines(input: {
     : ["我已收到这条请求，等待开始处理。"]
 }
 
-function progressEvents(input: { phase: SessionProgressPhase; tools: readonly ToolPart[]; busy: boolean }) {
+function progressEvents(input: {
+  phase: SessionProgressPhase
+  tools: readonly ToolPart[]
+  busy: boolean
+  elapsedMs?: number
+}) {
   const events = progressEventGroups(input.tools).map(
     (group, index): SessionProgressEvent => ({
       id: `${group.key}:${index}:${group.detailCount}`,
@@ -204,6 +217,7 @@ function progressEvents(input: { phase: SessionProgressPhase; tools: readonly To
     tools: input.tools,
     busy: input.busy,
     detailCount: input.tools.length,
+    elapsedMs: input.elapsedMs,
   }).map(
     (text, index): SessionProgressEvent => ({
       id: `empty:${input.phase}:${index}`,

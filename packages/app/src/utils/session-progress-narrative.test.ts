@@ -60,6 +60,22 @@ describe("session progress narrative", () => {
     expect(narrative.events[0]?.detailCount).toBe(0)
   })
 
+  test("explains long model waits before the first executable step appears", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user],
+      parts: {},
+      status: { type: "busy" } as SessionStatus,
+      now: 36_000,
+    })
+    const text = narrative.lines.join("\n")
+
+    expect(narrative.phase).toBe("understanding")
+    expect(text).toContain("模型还在生成执行步骤")
+    expect(text).toContain("读取、修改或验证")
+    expect(text).not.toContain("思考中")
+  })
+
   test("summarizes exploration, editing, and verification tools", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
