@@ -40,6 +40,16 @@ describe("SessionTurn source", () => {
     expect(source).not.toContain("aria-hidden={working()}")
   })
 
+  test("lets the Zingpop narrative replace the generic thinking shimmer", async () => {
+    const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
+    const showThinkingStart = source.indexOf("const showThinking")
+    const showThinkingSource = source.slice(showThinkingStart, source.indexOf("const showAssistantParts"))
+
+    expect(showThinkingStart).toBeGreaterThan(-1)
+    expect(showThinkingSource).toContain("if (props.userFacingAssistantOutput) return false")
+    expect(source.indexOf("props.assistantPrefix")).toBeLessThan(source.indexOf('data-slot="session-turn-thinking"'))
+  })
+
   test("keeps raw execution details collapsed in user-facing mode", async () => {
     const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
 
