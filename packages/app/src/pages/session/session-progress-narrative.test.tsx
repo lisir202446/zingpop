@@ -24,4 +24,18 @@ describe("SessionProgressNarrative", () => {
     expect(source).toContain('data-slot="session-progress-narrative-event"')
     expect(source).toContain("已运行")
   })
+
+  test("uses a Codex-like collapsible progress capsule by default", async () => {
+    const source = await Bun.file(new URL("./session-progress-narrative.tsx", import.meta.url)).text()
+
+    expect(source).toContain('import { Collapsible } from "@opencode-ai/ui/collapsible"')
+    expect(source).toContain("const [expanded, setExpanded] = createSignal(true)")
+    expect(source).toContain("if (narrative().busy && !expanded()) setExpanded(true)")
+    expect(source).toContain("<Collapsible open={expanded()} onOpenChange={setExpanded}")
+    expect(source).toContain('data-slot="session-progress-narrative-trigger"')
+    expect(source).toContain('aria-label={expanded() ? "收起处理过程" : "展开处理过程"}')
+    expect(source).toContain('data-slot="session-progress-narrative-content"')
+    expect(source).toContain("<Collapsible.Content")
+    expect(source).toContain("共运行")
+  })
 })
