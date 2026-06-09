@@ -59,4 +59,6 @@ const run = async (task) => {
 
 await commands.reduce((previous, task) => previous.then(() => run(task)), Promise.resolve())
 
-console.log("\nZingpop user experience verified: readable progress narrative, raw process filtering, and HTML preview target detection.")
+console.log(
+  "\nZingpop user experience verified: readable progress narrative, generic thinking suppression, raw process filtering, and HTML preview target detection.",
+)
