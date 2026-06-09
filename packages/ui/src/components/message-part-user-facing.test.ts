@@ -67,7 +67,7 @@ describe("user-facing assistant text filtering", () => {
     ).toEqual(new Set())
   })
 
-  test("keeps Chinese user-facing progress updates between tools", () => {
+  test("hides intermediate Chinese progress because the product narrative owns progress", () => {
     expect(
       keys([
         tool("read_1"),
@@ -77,10 +77,10 @@ describe("user-facing assistant text filtering", () => {
         tool("bash_1"),
         text("final", "已经修好，可以继续验收。"),
       ]),
-    ).toEqual(new Set(["assistant_1:progress_1", "assistant_1:progress_2", "assistant_1:final"]))
+    ).toEqual(new Set(["assistant_1:final"]))
   })
 
-  test("keeps prompt-guided Chinese progress narration examples", () => {
+  test("keeps only the final prompt-guided completion text after tools", () => {
     expect(
       keys([
         text("understanding", "正在确认要改哪里，避免误动无关文件。"),
@@ -91,9 +91,7 @@ describe("user-facing assistant text filtering", () => {
         tool("bash_1"),
         text("final", "已完成，可以从预览面板打开 study-plan.html。"),
       ]),
-    ).toEqual(
-      new Set(["assistant_1:understanding", "assistant_1:located", "assistant_1:recovering", "assistant_1:final"]),
-    )
+    ).toEqual(new Set(["assistant_1:final"]))
   })
 
   test("keeps final user-facing text after trailing progress text is filtered", () => {
@@ -113,6 +111,26 @@ describe("user-facing assistant text filtering", () => {
         tool("write_1"),
         text("process_2", "The file is too large for a single write."),
         tool("bash_1"),
+      ]),
+    ).toEqual(new Set())
+  })
+
+  test("keeps final English completion text after tools", () => {
+    expect(
+      keys([
+        tool("write_1"),
+        text("process_1", "I found the root cause in the current preview path."),
+        tool("bash_1"),
+        text("final", "Done. study-plan.html is ready to preview."),
+      ]),
+    ).toEqual(new Set(["assistant_1:final"]))
+  })
+
+  test("does not treat future-tense completion wording as a final answer", () => {
+    expect(
+      keys([
+        tool("write_1"),
+        text("process_1", "我会先完成剩余的页面区块，然后再验证预览。"),
       ]),
     ).toEqual(new Set())
   })
