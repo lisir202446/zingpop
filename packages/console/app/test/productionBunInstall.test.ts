@@ -44,6 +44,19 @@ describe("production bun install", () => {
     expect(probe).toContain("正在准备 HTML 预览")
   })
 
+  test("installer enables the production Nginx app and product hosts", async () => {
+    const install = await Bun.file(new URL("scripts/install-systemd.sh", repo)).text()
+
+    expect(install).toContain("/etc/nginx/sites-available")
+    expect(install).toContain("/etc/nginx/sites-enabled")
+    expect(install).toContain("deploy/nginx/zingpop-app.conf")
+    expect(install).toContain("deploy/nginx/zingpop-www.conf")
+    expect(install).toContain("/etc/nginx/sites-available/zingpop-app.conf")
+    expect(install).toContain("/etc/nginx/sites-enabled/zingpop-app.conf")
+    expect(install).toContain("/etc/nginx/sites-available/zingpop-www.conf")
+    expect(install).toContain("/etc/nginx/sites-enabled/zingpop-www.conf")
+  })
+
   test("installer avoids stale cache tarballs and verifies critical packages", async () => {
     const install = await Bun.file(new URL("scripts/production-bun-install.sh", repo)).text()
 
