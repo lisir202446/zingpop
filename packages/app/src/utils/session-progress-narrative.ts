@@ -40,15 +40,28 @@ export function buildSessionProgressNarrative(input: {
   const busy = input.status?.type === "busy" || input.status?.type === "retry" || input.waiting === true
   const running = tools.findLast((part) => part.state.status === "pending" || part.state.status === "running")
   const errored = tools.findLast((part) => part.state.status === "error")
-  const active = errored ?? running ?? tools.at(-1)
-  const phase = progressPhase({ active, busy, errored, waiting: input.waiting === true, toolCount: tools.length })
+  const latest = tools.at(-1)
+  const blockingError = errored && !busy && latest?.state.status === "error" ? errored : undefined
+  const active = blockingError ?? running ?? latest ?? errored
+  const phase = progressPhase({
+    active,
+    busy,
+    errored: blockingError,
+    waiting: input.waiting === true,
+    toolCount: tools.length,
+  })
   const target = active ? toolTarget(active) : undefined
   const waitingCount = countTools(tools, "waiting")
 
   return {
     phase,
     busy,
-    elapsedMs: elapsedMs(input.messages.find((message) => message.id === input.messageID), assistantMessages, busy, input.now),
+    elapsedMs: elapsedMs(
+      input.messages.find((message) => message.id === input.messageID),
+      assistantMessages,
+      busy,
+      input.now,
+    ),
     detailCount: tools.length,
     counts: {
       planning: countTools(tools, "planning"),
@@ -57,7 +70,7 @@ export function buildSessionProgressNarrative(input: {
       verifying: countTools(tools, "verifying"),
       waiting: input.waiting ? Math.max(waitingCount, 1) : waitingCount,
     },
-    lines: progressLines({ phase, target, tool: active?.tool, busy, detailCount: tools.length }),
+    lines: progressLines({ phase, target, tool: active?.tool, tools, busy, detailCount: tools.length }),
   }
 }
 
@@ -110,11 +123,18 @@ function progressLines(input: {
   phase: SessionProgressPhase
   target?: string
   tool?: string
+  tools: readonly ToolPart[]
   busy: boolean
   detailCount: number
 }) {
+  const recent = compactLines(input.tools.flatMap(userFacingToolLine)).slice(-4)
   if (input.phase === "error") {
-    return [`遇到错误：${input.tool ? describeTool(input.tool, input.target) : "执行过程失败"}。可以展开详细执行记录查看原始输出。`]
+    return [
+      `遇到错误：${input.tool ? describeTool(input.tool, input.target) : "执行过程失败"}。可以展开详细执行记录查看原始输出。`,
+    ]
+  }
+  if (recent.length > 0 && input.phase !== "complete") {
+    return recent
   }
   if (input.phase === "planning") {
     return ["我正在把需求拆成可执行步骤，先确认任务顺序和当前要处理的重点。"]
@@ -132,15 +152,24 @@ function progressLines(input: {
     return ["我正在等待确认信息，确认后会继续执行后续步骤。"]
   }
   if (input.phase === "complete") {
-    return [`本轮工作已完成，保留了 ${input.detailCount} 条详细执行记录，可展开核查原始工具输出。`]
+    return [`本轮工作已完成，保留了 ${input.detailCount} 条详细执行记录，可展开核查原始工具输出。`, ...recent].filter(
+      (line) => line.length > 0,
+    )
   }
-  return [input.busy ? "我正在理解你的需求，并准备把它拆成可以执行的工作步骤。" : "我已收到这条请求，等待开始处理。"]
+  return input.busy
+    ? [
+        "我正在理解你想做的内容，并判断需要产出什么文件或页面。",
+        "接下来会先确认项目里是否已有相关文件，再开始创建或修改。",
+      ]
+    : ["我已收到这条请求，等待开始处理。"]
 }
 
 function describeTool(tool: string, target?: string) {
   if (tool === "bash") return target ? `运行 ${target} 时失败` : "运行命令时失败"
-  if (tool === "write" || tool === "edit" || tool === "apply_patch") return target ? `修改 ${target} 时失败` : "修改文件时失败"
-  if (tool === "read" || tool === "list" || tool === "glob" || tool === "grep") return target ? `检查 ${target} 时失败` : "检查项目上下文时失败"
+  if (tool === "write" || tool === "edit" || tool === "apply_patch")
+    return target ? `修改 ${target} 时失败` : "修改文件时失败"
+  if (tool === "read" || tool === "list" || tool === "glob" || tool === "grep")
+    return target ? `检查 ${target} 时失败` : "检查项目上下文时失败"
   return target ? `${tool} ${target} 失败` : `${tool} 失败`
 }
 
@@ -157,6 +186,82 @@ function shortTarget(value: string | undefined) {
   const normalized = value.replace(/\s+/g, " ").trim()
   if (normalized.length <= 140) return normalized
   return `${normalized.slice(0, 137)}...`
+}
+
+function compactLines(lines: readonly string[]) {
+  return lines.filter((line, index) => line && lines.indexOf(line) === index)
+}
+
+function inputText(part: ToolPart) {
+  const values = [
+    ...["filePath", "path", "command", "pattern", "query", "description", "error", "tool"]
+      .map((key) => part.state.input[key])
+      .filter((value): value is string => typeof value === "string" && value.length > 0),
+    part.state.status === "error" ? part.state.error : undefined,
+    part.state.status === "completed" ? part.state.title : undefined,
+  ]
+  return values.filter((value): value is string => !!value).join(" ")
+}
+
+function isRecoverableWriteFormatError(part: ToolPart) {
+  const text = inputText(part).toLowerCase()
+  return (
+    (part.tool === "invalid" || part.state.status === "error") &&
+    text.includes("write") &&
+    (text.includes("json parsing") || text.includes("invalid input"))
+  )
+}
+
+function commandWritesFile(part: ToolPart) {
+  if (part.tool !== "bash") return
+  const command = firstString(part.state.input, ["command"])
+  if (!command) return
+  return />\s*[^"'`\s]+|cat\s+>|tee\s+/.test(command)
+}
+
+function toolTargetName(part: ToolPart) {
+  const target = toolTarget(part)
+  if (!target) return
+  return target.replace(/^.*[\\/]/, "")
+}
+
+function userFacingToolLine(part: ToolPart) {
+  const target = toolTargetName(part)
+  if (isRecoverableWriteFormatError(part)) {
+    return ["写入文件时遇到内容格式限制，我正在换一种方式，用更稳定的写入流程继续生成。"]
+  }
+  if (part.tool === "todowrite") return ["我已经把任务拆成步骤，正在按顺序推进。"]
+  if (part.tool === "read" || part.tool === "list" || part.tool === "glob" || part.tool === "grep") {
+    if (part.state.status === "completed") return ["我已经检查了项目里的相关文件和上下文。"]
+    return ["我正在查看项目里的相关文件，确认应该在哪里动手。"]
+  }
+  if (part.tool === "write") {
+    if (part.state.status === "completed") return [`我已经创建了${target ? ` ${target}` : "目标文件"}。`]
+    return [`我正在创建${target ? ` ${target}` : "目标文件"}。`]
+  }
+  if (part.tool === "edit" || part.tool === "apply_patch") {
+    if (part.state.status === "completed") return [`我已经更新了${target ? ` ${target}` : "相关文件"}。`]
+    return [`我正在补充${target ? ` ${target}` : "相关文件"}的内容和交互。`]
+  }
+  if (commandWritesFile(part)) {
+    return ["我正在用更稳定的写入方式生成文件内容。"]
+  }
+  if (part.tool === "bash") {
+    const command = toolTarget(part)
+    if (part.state.status === "completed") {
+      return [
+        command
+          ? `我已经运行检查（${command}），确认生成结果可以继续验收。`
+          : "我已经运行了一轮检查，确认生成结果可以继续验收。",
+      ]
+    }
+    return [
+      command ? `我正在运行检查（${command}），确认生成结果能正常打开。` : "我正在运行检查，确认生成结果能正常打开。",
+    ]
+  }
+  if (part.tool === "question") return ["我正在等待确认信息，确认后会继续执行后续步骤。"]
+  if (part.state.status === "error") return ["执行时遇到一个底层限制，我正在调整方法继续处理。"]
+  return []
 }
 
 function elapsedMs(

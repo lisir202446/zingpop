@@ -17,5 +17,6 @@ describe("session progress narrative source integration", () => {
     expect(source).toContain("sessionQuestionRequest")
     expect(source).toContain("waitingForResponse")
     expect(source).toContain("waiting={active() && waitingForResponse()}")
+    expect(source).toContain("userFacingAssistantOutput={true}")
   })
 })

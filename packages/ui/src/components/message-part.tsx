@@ -599,6 +599,7 @@ export function AssistantParts(props: {
   showReasoningSummaries?: boolean
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
+  userFacingOnly?: boolean
 }) {
   const data = useData()
   const emptyParts: PartType[] = []
@@ -610,13 +611,36 @@ export function AssistantParts(props: {
         props.messages.map((message) => [message.id, index(list(data.store.part?.[message.id], emptyParts))] as const),
       ),
   )
+  const userFacingTextPartIDs = createMemo(() => {
+    if (!props.userFacingOnly) return
+
+    const items = props.messages.flatMap((message) =>
+      list(data.store.part?.[message.id], emptyParts).map((part) => ({
+        messageID: message.id,
+        part,
+      })),
+    )
+    const lastToolIndex = items.findLastIndex((item) => item.part.type === "tool")
+    const afterTools = items
+      .slice(lastToolIndex + 1)
+      .filter((item) => item.part.type === "text" && !!item.part.text?.trim())
+    const visible =
+      afterTools.length > 0
+        ? afterTools
+        : items.filter((item) => item.part.type === "text" && !!item.part.text?.trim()).slice(-1)
+
+    return new Set(visible.map((item) => `${item.messageID}:${item.part.id}`))
+  })
 
   const grouped = createMemo(
     () =>
       groupParts(
         props.messages.flatMap((message) =>
           list(data.store.part?.[message.id], emptyParts)
-            .filter((part) => renderable(part, props.showReasoningSummaries ?? true))
+            .filter((part) => {
+              if (!props.userFacingOnly) return renderable(part, props.showReasoningSummaries ?? true)
+              return userFacingTextPartIDs()?.has(`${message.id}:${part.id}`) === true
+            })
             .map((part) => ({
               messageID: message.id,
               part,

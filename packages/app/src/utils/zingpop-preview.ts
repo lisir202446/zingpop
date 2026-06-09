@@ -96,18 +96,36 @@ export function previewArtifactName(path: string) {
   return normalizePreviewArtifactPath(path).split("/").pop() || path
 }
 
-function inputFilePath(input: { [key: string]: unknown }) {
-  return typeof input.filePath === "string" ? input.filePath : undefined
+function firstString(input: { [key: string]: unknown }, keys: readonly string[]) {
+  return keys.map((key) => input[key]).find((value): value is string => typeof value === "string" && value.length > 0)
+}
+
+function htmlPathsFromText(text: string) {
+  return Array.from(text.matchAll(/(?:^|[\s"'`(（])((?:[A-Za-z]:)?[^\s"'`<>()（）]+?\.(?:html|htm))/gi))
+    .map((match) => match[1]?.replace(/[，。！？；：,.!?;:]+$/, ""))
+    .filter((path): path is string => !!path && isZingpopPreviewArtifact(path))
+}
+
+function toolText(part: Extract<Part, { type: "tool" }>) {
+  const values = [
+    firstString(part.state.input, ["filePath", "path", "command", "description", "query"]),
+    part.state.status === "completed" ? part.state.title : undefined,
+    part.state.status === "completed" ? part.state.output : undefined,
+    part.state.status === "error" ? part.state.error : undefined,
+  ]
+  return values.filter((value): value is string => !!value).join("\n")
 }
 
 export function previewArtifactPathFromParts(parts: Part[]) {
   return parts
-    .flatMap((part) => {
+    .flatMap((part): string[] => {
+      if (part.type === "text") return htmlPathsFromText(part.text)
       if (part.type !== "tool") return []
-      if (part.tool !== "write" && part.tool !== "edit") return []
-      const path = inputFilePath(part.state.input)
-      if (!path || !isZingpopPreviewArtifact(path)) return []
-      return [path]
+      if (part.tool === "write" || part.tool === "edit") {
+        const path = firstString(part.state.input, ["filePath", "path"])
+        if (path && isZingpopPreviewArtifact(path)) return [path]
+      }
+      return htmlPathsFromText(toolText(part))
     })
     .at(-1)
 }

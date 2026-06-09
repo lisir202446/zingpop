@@ -175,4 +175,29 @@ describe("session progress narrative", () => {
     expect(line).toContain("...")
     expect(line.length).toBeLessThan(command.length)
   })
+
+  test("explains recoverable write formatting errors in user-facing language", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [
+          tool("invalid", "error", {
+            tool: "write",
+            filePath: "study-plan.html",
+            error: "Invalid input for tool write: JSON parsing failed",
+          }),
+          tool("bash", "running", { command: "cat > study-plan.html <<'EOF'" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 3000,
+    })
+    const text = narrative.lines.join("\n")
+
+    expect(narrative.phase).not.toBe("error")
+    expect(text).toContain("格式限制")
+    expect(text).toContain("换一种方式")
+    expect(text).not.toContain("JSON parsing")
+  })
 })

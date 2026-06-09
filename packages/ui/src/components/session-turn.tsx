@@ -156,6 +156,7 @@ export function SessionTurn(
     active?: boolean
     status?: SessionStatus
     assistantPrefix?: JSX.Element
+    userFacingAssistantOutput?: boolean
     onUserInteracted?: () => void
     classes?: {
       root?: string
@@ -356,10 +357,15 @@ export function SessionTurn(
   const assistantVisible = createMemo(() => assistantDerived().visible)
   const reasoningHeading = createMemo(() => assistantDerived().reason)
   const showThinking = createMemo(() => {
+    if (props.userFacingAssistantOutput) return false
     if (!working() || !!error()) return false
     if (status().type === "retry") return false
     if (showReasoningSummaries()) return assistantVisible() === 0
     return true
+  })
+  const showAssistantParts = createMemo(() => {
+    if (props.userFacingAssistantOutput && working()) return false
+    return assistantMessages().length > 0
   })
 
   const autoScroll = createAutoScroll({
@@ -393,7 +399,7 @@ export function SessionTurn(
                 </div>
               </Show>
               {props.assistantPrefix}
-              <Show when={assistantMessages().length > 0}>
+              <Show when={showAssistantParts()}>
                 <div data-slot="session-turn-assistant-content" aria-hidden={working()}>
                   <AssistantParts
                     messages={assistantMessages()}
@@ -403,6 +409,7 @@ export function SessionTurn(
                     showReasoningSummaries={showReasoningSummaries()}
                     shellToolDefaultOpen={props.shellToolDefaultOpen}
                     editToolDefaultOpen={props.editToolDefaultOpen}
+                    userFacingOnly={props.userFacingAssistantOutput}
                   />
                 </div>
               </Show>

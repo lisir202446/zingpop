@@ -1126,6 +1126,7 @@ export function MessageTimeline(props: {
                         showReasoningSummaries={settings.general.showReasoningSummaries()}
                         shellToolDefaultOpen={settings.general.shellToolPartsExpanded()}
                         editToolDefaultOpen={settings.general.editToolPartsExpanded()}
+                        userFacingAssistantOutput={true}
                         assistantPrefix={
                           <SessionProgressNarrative
                             messageID={messageID}

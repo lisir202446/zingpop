@@ -136,6 +136,78 @@ describe("zingpop preview utilities", () => {
     ).toBe("parkour.html")
   })
 
+  test("finds generated html from tool path aliases and assistant text fallback", () => {
+    expect(
+      previewArtifactPathForTurn({
+        messageID: "user_1",
+        messages: [
+          { id: "user_1", role: "user" },
+          { id: "assistant_1", role: "assistant", parentID: "user_1" },
+        ],
+        parts: {
+          assistant_1: [
+            {
+              id: "part_1",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_1",
+              tool: "write",
+              state: {
+                status: "completed",
+                input: { path: "study-plan.html" },
+                output: "",
+                title: "write",
+                metadata: {},
+                time: { start: 1, end: 2 },
+              },
+            },
+            {
+              id: "part_2",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "text",
+              text: "从 Zingpop 预览面板打开 study-plan.html 即可查看。",
+              time: { start: 3, end: 4 },
+            },
+          ],
+        },
+      }),
+    ).toBe("study-plan.html")
+  })
+
+  test("finds generated html from a bash fallback command", () => {
+    expect(
+      previewArtifactPathForTurn({
+        messageID: "user_1",
+        messages: [
+          { id: "user_1", role: "user" },
+          { id: "assistant_1", role: "assistant", parentID: "user_1" },
+        ],
+        parts: {
+          assistant_1: [
+            {
+              id: "part_1",
+              sessionID: "session_1",
+              messageID: "assistant_1",
+              type: "tool",
+              callID: "call_1",
+              tool: "bash",
+              state: {
+                status: "completed",
+                input: { command: "cat > study-plan.html <<'EOF'\n<html></html>\nEOF" },
+                output: "",
+                title: "bash",
+                metadata: {},
+                time: { start: 1, end: 2 },
+              },
+            },
+          ],
+        },
+      }),
+    ).toBe("study-plan.html")
+  })
+
   test("finds generated html from the following assistant when parent linkage is unavailable", () => {
     expect(
       previewArtifactPathForTurn({

@@ -13,4 +13,11 @@ describe("SessionTurn source", () => {
     expect(prefixIndex).toBeGreaterThan(messageIndex)
     expect(assistantIndex).toBeGreaterThan(prefixIndex)
   })
+
+  test("can show user-facing assistant output without raw tool parts", async () => {
+    const source = await Bun.file(new URL("./session-turn.tsx", import.meta.url)).text()
+
+    expect(source).toContain("userFacingAssistantOutput")
+    expect(source).toContain("props.userFacingAssistantOutput")
+  })
 })
