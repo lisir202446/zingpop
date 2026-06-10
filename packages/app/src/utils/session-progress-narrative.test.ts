@@ -54,6 +54,16 @@ function text(id: string, value: string): Part {
   } as Part
 }
 
+function userText(id: string, value: string): Part {
+  return {
+    id,
+    sessionID: "session_1",
+    messageID: "user_1",
+    type: "text",
+    text: value,
+  } as Part
+}
+
 describe("session progress narrative", () => {
   test("starts with an understanding narrative when no tools have run", () => {
     const narrative = buildSessionProgressNarrative({
@@ -68,6 +78,65 @@ describe("session progress narrative", () => {
     expect(narrative.lines[0]).toContain("正在理解")
     expect(narrative.events[0]?.text).toContain("正在理解")
     expect(narrative.events[0]?.detailCount).toBe(0)
+  })
+
+  test("shows a product-making process before tool events arrive", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user],
+      parts: { user_1: [userText("request_1", "帮我做一个枪战小游戏")] },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(narrative.events.length).toBeGreaterThanOrEqual(4)
+    expect(textValue).toContain("枪战小游戏")
+    expect(textValue).toContain("玩法目标")
+    expect(textValue).toContain("核心结构")
+    expect(textValue).toContain("预览入口")
+    expect(textValue).not.toBe("我正在生成作品内容，并准备可打开的预览入口。")
+  })
+
+  test("keeps the product process visible when the model only says it is generating", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        user_1: [userText("request_1", "帮我做一个枪战小游戏")],
+        assistant_1: [text("process_1", "我正在生成作品内容，并准备可打开的预览入口。")],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(narrative.events.length).toBeGreaterThanOrEqual(4)
+    expect(textValue).toContain("枪战小游戏")
+    expect(textValue).toContain("玩法目标")
+    expect(textValue).toContain("核心结构")
+    expect(textValue).toContain("预览入口")
+  })
+
+  test("replaces target-specific generation placeholders with the product process", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        user_1: [userText("request_1", "帮我做一个AI学习计划工具")],
+        assistant_1: [text("process_1", "我正在生成 study-plan.html 内容，并准备可打开的预览入口。")],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(narrative.events.length).toBeGreaterThanOrEqual(4)
+    expect(textValue).toContain("AI学习计划工具")
+    expect(textValue).toContain("玩法目标")
+    expect(textValue).toContain("核心结构")
+    expect(textValue).toContain("预览入口")
+    expect(textValue).not.toBe("我正在生成 study-plan.html 内容，并准备可打开的预览入口。")
   })
 
   test("explains long model waits before the first executable step appears", () => {

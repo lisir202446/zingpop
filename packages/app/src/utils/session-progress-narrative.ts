@@ -56,6 +56,7 @@ export function buildSessionProgressNarrative(input: {
   now?: number
 }): SessionProgressNarrative {
   const assistantMessages = assistantMessagesForProgress(input.messages, input.messageID)
+  const userRequest = userRequestForProgress(input.parts[input.messageID] ?? [])
   const assistantParts = assistantMessages.flatMap((message) => input.parts[message.id] ?? [])
   const tools = assistantParts.filter((part): part is ToolPart => part.type === "tool")
   const busy = input.status?.type === "busy" || input.status?.type === "retry" || input.waiting === true
@@ -78,7 +79,7 @@ export function buildSessionProgressNarrative(input: {
     busy,
     input.now,
   )
-  const events = progressEvents({ phase, parts: assistantParts, tools, busy, elapsedMs: elapsed })
+  const events = progressEvents({ phase, parts: assistantParts, request: userRequest, tools, busy, elapsedMs: elapsed })
   const todo = progressTodo(tools)
 
   return {
@@ -115,6 +116,17 @@ function assistantMessagesForProgress(messages: readonly Message[], messageID: s
     .filter(
       (item): item is AssistantMessage => item.role === "assistant" && (!item.parentID || item.parentID === messageID),
     )
+}
+
+function userRequestForProgress(parts: readonly Part[]) {
+  const text = parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!text) return
+  return text
 }
 
 function toolKind(tool: string) {
@@ -197,6 +209,7 @@ function progressLines(input: {
 function progressEvents(input: {
   phase: SessionProgressPhase
   parts: readonly Part[]
+  request?: string
   tools: readonly ToolPart[]
   busy: boolean
   elapsedMs?: number
@@ -213,6 +226,9 @@ function progressEvents(input: {
     ),
     ...progressTextEvents(input.parts),
   ]).sort((a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id))
+  if (input.busy && input.tools.length === 0 && input.request && shouldUseProductProcess(events)) {
+    return productProcessEvents(input.request)
+  }
   if (events.length > 0) return events
 
   return progressLines({
@@ -230,6 +246,65 @@ function progressEvents(input: {
       text,
     }),
   )
+}
+
+function shouldUseProductProcess(events: readonly SessionProgressEvent[]) {
+  return (
+    events.length === 0 ||
+    events.length === 1 ||
+    events.every((event) => isGenericProductGenerationText(event.text))
+  )
+}
+
+function isGenericProductGenerationText(value: string) {
+  return value.includes("我正在生成") && value.includes("预览入口")
+}
+
+function productProcessEvents(request: string): SessionProgressEvent[] {
+  const title = productRequestTitle(request)
+  const artifact = productArtifactName(request)
+
+  return [
+    {
+      id: "product-process:understanding",
+      phase: "understanding",
+      detailCount: 0,
+      status: "done",
+      text: `我先把“${title}”理解成一个可以直接体验的作品，而不是只写一段说明。`,
+    },
+    {
+      id: "product-process:planning",
+      phase: "planning",
+      detailCount: 0,
+      status: "active",
+      text: `接下来会拆清楚玩法目标和核心结构：用户要做什么、页面上需要哪些区域、交互如何开始和结束。`,
+    },
+    {
+      id: "product-process:editing",
+      phase: "editing",
+      detailCount: 0,
+      status: "active",
+      text: `然后我会把 ${artifact} 写成可运行的 HTML 作品，补上界面、交互逻辑、状态变化和基础视觉表现。`,
+    },
+    {
+      id: "product-process:verifying",
+      phase: "verifying",
+      detailCount: 0,
+      status: "active",
+      text: "最后会准备预览入口，让你能直接打开检查，而不是只看到一段完成描述。",
+    },
+  ]
+}
+
+function productRequestTitle(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 42)
+}
+
+function productArtifactName(value: string) {
+  if (/枪战|射击|小游戏|游戏/.test(value)) return "这个小游戏"
+  if (/网站|主页|页面|官网|landing/i.test(value)) return "这个页面"
+  if (/工具|计算器|表格|生成器/.test(value)) return "这个工具"
+  return "这个作品"
 }
 
 function compactProgressEvents(events: readonly SessionProgressEvent[]) {
