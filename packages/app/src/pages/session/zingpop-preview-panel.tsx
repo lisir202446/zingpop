@@ -246,7 +246,7 @@ function ZingpopPreviewDockArtifact(props: { artifact: PreviewArtifact }) {
 }
 
 export function ZingpopPreviewDock() {
-  const preview = createZingpopPreviewArtifacts({ manifestFallback: true })
+  const preview = createZingpopPreviewArtifacts({ manifestFallback: false })
 
   return (
     <Show

@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test"
 
 describe("Zingpop preview panel source", () => {
-  test("lets the composer dock fall back to the latest html manifest entry", async () => {
+  test("keeps the composer dock from showing stale html manifest entries", async () => {
     const source = await Bun.file(new URL("./zingpop-preview-panel.tsx", import.meta.url)).text()
     const dockStart = source.indexOf("export function ZingpopPreviewDock")
     const dockSource = source.slice(dockStart, source.indexOf("function ZingpopPreviewPanelArtifact"))
 
-    expect(dockSource).toContain("createZingpopPreviewArtifacts({ manifestFallback: true })")
+    expect(dockSource).toContain("createZingpopPreviewArtifacts({ manifestFallback: false })")
+    expect(dockSource).not.toContain("manifestFallback: true")
     expect(dockSource).toContain("preview.pending()")
     expect(source).toContain("正在准备 HTML 预览")
   })
