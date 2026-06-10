@@ -65,7 +65,7 @@ function userText(id: string, value: string): Part {
 }
 
 describe("session progress narrative", () => {
-  test("uses agent-authored structured progress events instead of inferred tool summaries", () => {
+  test("keeps detailed agent-authored progress as a supplement to executor workflow events", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
       messages: [user, assistant],
@@ -83,11 +83,71 @@ describe("session progress narrative", () => {
       now: 6000,
     })
 
-    expect(narrative.events[0]?.text).toBe(
-      "明确目标：我先把这个需求按可玩的版本拆开：玩家移动、射击、敌人生成、计分和失败重开。",
-    )
-    expect(narrative.events.map((event) => event.text).join("\n")).not.toContain("zingpop_progress")
-    expect(narrative.events.map((event) => event.text).join("\n")).not.toContain("shooter.html")
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(narrative.events[0]?.source).toBe("executor")
+    expect(narrative.events.map((event) => event.source)).toContain("agent")
+    expect(textValue).toContain("帮我做一个枪战小游戏")
+    expect(textValue).toContain("明确目标：我先把这个需求按可玩的版本拆开")
+    expect(textValue).not.toContain("zingpop_progress")
+  })
+
+  test("keeps executor-authored workflow events when the model only emits one generic progress line", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        user_1: [userText("request_1", "帮我做一个枪战小游戏")],
+        assistant_1: [
+          text(
+            "agent_progress_1",
+            '<zingpop_progress phase="editing" status="active" title="生成作品">我正在生成作品内容，并准备可打开的预览入口。</zingpop_progress>',
+          ),
+          tool("read", "completed", { filePath: "shooter.html" }),
+          tool("edit", "running", { filePath: "shooter.html" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(narrative.events.length).toBeGreaterThanOrEqual(4)
+    expect(narrative.events.map((event) => event.source)).toContain("executor")
+    expect(textValue).toContain("枪战小游戏")
+    expect(textValue).toContain("玩法目标")
+    expect(textValue).toContain("核心结构")
+    expect(textValue).toContain("shooter.html")
+    expect(textValue).not.toBe("生成作品：我正在生成作品内容，并准备可打开的预览入口。")
+  })
+
+  test("builds executor workflow events for debugging tasks, not only product generation", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        user_1: [userText("request_1", "修复发送消息后页面短暂白屏的问题")],
+        assistant_1: [
+          text(
+            "agent_progress_1",
+            '<zingpop_progress phase="understanding" status="active" title="处理问题">我正在处理这个问题。</zingpop_progress>',
+          ),
+          tool("grep", "completed", { pattern: "Suspense", path: "packages/app" }),
+          tool("edit", "running", { filePath: "packages/app/src/pages/session.tsx" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(narrative.events.map((event) => event.source)).toContain("executor")
+    expect(textValue).toContain("修复发送消息后页面短暂白屏的问题")
+    expect(textValue).toContain("定位")
+    expect(textValue).toContain("修改")
+    expect(textValue).toContain("验证")
+    expect(textValue).toContain("session.tsx")
+    expect(textValue).not.toContain("我正在处理这个问题")
   })
 
   test("parses blocked and recovering structured progress phases", () => {

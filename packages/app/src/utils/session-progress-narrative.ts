@@ -18,7 +18,7 @@ export type SessionProgressEvent = {
   detailCount: number
   status: "done" | "active" | "error"
   text: string
-  source?: "agent" | "product" | "tool" | "text" | "fallback"
+  source?: "agent" | "executor" | "tool" | "text" | "fallback"
 }
 
 export type SessionProgressTodoItem = {
@@ -233,25 +233,29 @@ function progressEvents(input: {
   )
   const textEvents = progressTextEvents(input.parts)
   const agentEvents = textEvents.filter((event) => event.source === "agent")
+  const nonAgentTextEvents = textEvents.filter((event) => event.source !== "agent")
+  const events = compactProgressEvents([...toolEvents, ...nonAgentTextEvents]).sort(
+    (a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id),
+  )
+
+  if (input.request && shouldUseExecutorProcess(input, [...events, ...agentEvents])) {
+    return compactProgressEvents([
+      ...executorProcessEvents({
+        request: input.request,
+        phase: input.phase,
+        tools: input.tools,
+      }),
+      ...agentEvents.filter((event) => !isGenericAgentProgressText(event.text)),
+      ...events,
+    ])
+  }
+
   if (agentEvents.length > 0) {
     return compactProgressEvents(agentEvents).sort(
       (a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id),
     )
   }
 
-  const events = compactProgressEvents([...toolEvents, ...textEvents]).sort(
-    (a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id),
-  )
-  if (input.request && shouldUseProductProcess(input, events)) {
-    return compactProgressEvents([
-      ...productProcessEvents({
-        request: input.request,
-        phase: input.phase,
-        tools: input.tools,
-      }),
-      ...events,
-    ])
-  }
   if (events.length > 0) return events
 
   return progressLines({
@@ -272,7 +276,7 @@ function progressEvents(input: {
   )
 }
 
-function shouldUseProductProcess(
+function shouldUseExecutorProcess(
   input: {
     request?: string
     tools: readonly ToolPart[]
@@ -280,7 +284,8 @@ function shouldUseProductProcess(
   },
   events: readonly SessionProgressEvent[],
 ) {
-  if (input.tools.length > 0) return isProductRequest(input.request)
+  if (!input.request) return false
+  if (input.tools.length > 0) return true
   return (
     input.busy &&
     (events.length === 0 || events.length === 1 || events.every((event) => isGenericProductGenerationText(event.text)))
@@ -291,6 +296,13 @@ function isGenericProductGenerationText(value: string) {
   return value.includes("我正在生成") && value.includes("预览入口")
 }
 
+function isGenericAgentProgressText(value: string) {
+  return (
+    isGenericProductGenerationText(value) ||
+    /我正在(处理这个问题|处理这(个|项)任务|继续处理|推进这个任务|生成作品内容)/.test(value)
+  )
+}
+
 function isProductRequest(value: string | undefined) {
   if (!value) return false
   return /(做|制作|创建|生成|写|搭建|开发|实现).*(小游戏|游戏|工具|页面|网站|网页|HTML|作品|表格|计划|看板|应用|app)|小游戏|游戏|网页|网站|HTML|作品/i.test(
@@ -298,12 +310,19 @@ function isProductRequest(value: string | undefined) {
   )
 }
 
-function productProcessEvents(input: {
+function executorProcessEvents(input: {
   request: string
   phase: SessionProgressPhase
   tools: readonly ToolPart[]
 }): SessionProgressEvent[] {
   const title = productRequestTitle(input.request)
+  if (!isProductRequest(input.request)) {
+    return genericExecutorProcessEvents({
+      title,
+      phase: input.phase,
+      tools: input.tools,
+    })
+  }
   const artifact = productArtifactName(input.request)
   const hasTools = input.tools.length > 0
   const hasVerifying = input.tools.some((part) => toolKind(part.tool) === "verifying")
@@ -316,7 +335,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: "done",
       text: `我先把“${title}”理解成一个可以直接体验的作品，而不是只写一段说明。`,
-      source: "product",
+      source: "executor",
     },
     {
       id: "product-process:planning",
@@ -324,7 +343,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: hasTools ? "done" : "active",
       text: `接下来会拆清楚玩法目标和核心结构：用户要做什么、页面上需要哪些区域、交互如何开始和结束。`,
-      source: "product",
+      source: "executor",
     },
     {
       id: "product-process:editing",
@@ -332,7 +351,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: complete || hasVerifying ? "done" : "active",
       text: `然后我会把 ${artifact} 写成可运行的 HTML 作品，补上界面、交互逻辑、状态变化和基础视觉表现。`,
-      source: "product",
+      source: "executor",
     },
     {
       id: "product-process:verifying",
@@ -340,7 +359,52 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: complete ? "done" : "active",
       text: "最后会准备预览入口，让你能直接打开检查，而不是只看到一段完成描述。",
-      source: "product",
+      source: "executor",
+    },
+  ]
+}
+
+function genericExecutorProcessEvents(input: {
+  title: string
+  phase: SessionProgressPhase
+  tools: readonly ToolPart[]
+}): SessionProgressEvent[] {
+  const hasTools = input.tools.length > 0
+  const hasVerifying = input.tools.some((part) => toolKind(part.tool) === "verifying")
+  const complete = input.phase === "complete"
+
+  return [
+    {
+      id: "executor-process:understanding",
+      phase: "understanding",
+      detailCount: 0,
+      status: "done",
+      text: `我先把“${input.title}”理解成一个需要定位原因、修改实现、再验证结果的任务。`,
+      source: "executor",
+    },
+    {
+      id: "executor-process:planning",
+      phase: "planning",
+      detailCount: 0,
+      status: hasTools ? "done" : "active",
+      text: "接下来会先定位相关代码和触发路径，确认影响范围，再决定最小改动位置。",
+      source: "executor",
+    },
+    {
+      id: "executor-process:editing",
+      phase: "editing",
+      detailCount: 0,
+      status: complete || hasVerifying ? "done" : "active",
+      text: "然后我会修改相关文件，把问题修在合适的产品层或实现边界内。",
+      source: "executor",
+    },
+    {
+      id: "executor-process:verifying",
+      phase: "verifying",
+      detailCount: 0,
+      status: complete ? "done" : "active",
+      text: "最后会运行对应检查，确认问题不再复现，且没有破坏原有流程。",
+      source: "executor",
     },
   ]
 }
