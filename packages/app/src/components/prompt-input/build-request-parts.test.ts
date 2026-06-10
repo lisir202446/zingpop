@@ -3,6 +3,32 @@ import type { Prompt } from "@/context/prompt"
 import { buildRequestParts } from "./build-request-parts"
 
 describe("buildRequestParts", () => {
+  test("adds hidden Zingpop progress protocol to model request but not optimistic UI", () => {
+    const result = buildRequestParts({
+      prompt: [{ type: "text", content: "帮我做一个枪战小游戏", start: 0, end: 10 }],
+      context: [],
+      images: [],
+      text: "帮我做一个枪战小游戏",
+      messageID: "msg_progress",
+      sessionID: "ses_progress",
+      sessionDirectory: "/repo",
+    })
+
+    const requestText = result.requestParts.find((part) => part.type === "text" && !part.synthetic)
+    const protocolText = result.requestParts.find(
+      (part) => part.type === "text" && part.synthetic && part.metadata?.zingpopProgressProtocol,
+    )
+    const optimisticText = result.optimisticParts.find((part) => part.type === "text")
+
+    expect(requestText?.type === "text" ? requestText.text : "").toBe("帮我做一个枪战小游戏")
+    expect(protocolText?.type === "text" ? protocolText.text : "").toContain("<zingpop_progress_protocol>")
+    expect(protocolText?.type === "text" ? protocolText.text : "").toContain("<zingpop_progress")
+    expect(protocolText?.type === "text" ? protocolText.text : "").toContain("blocked")
+    expect(protocolText?.type === "text" ? protocolText.text : "").toContain("recovering")
+    expect(optimisticText?.type === "text" ? optimisticText.text : "").toBe("帮我做一个枪战小游戏")
+    expect(optimisticText?.type === "text" ? optimisticText.text : "").not.toContain("zingpop_progress")
+  })
+
   test("builds typed request and optimistic parts without cast path", () => {
     const prompt: Prompt = [
       { type: "text", content: "hello", start: 0, end: 5 },
@@ -94,7 +120,9 @@ describe("buildRequestParts", () => {
     const fooFiles = result.requestParts.filter(
       (part) => part.type === "file" && part.url.startsWith("file:///repo/src/foo.ts"),
     )
-    const synthetic = result.requestParts.filter((part) => part.type === "text" && part.synthetic)
+    const synthetic = result.requestParts.filter(
+      (part) => part.type === "text" && part.synthetic && part.metadata?.opencodeComment,
+    )
 
     expect(fooFiles).toHaveLength(2)
     expect(synthetic).toHaveLength(1)

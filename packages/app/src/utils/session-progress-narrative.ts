@@ -6,6 +6,8 @@ export type SessionProgressPhase =
   | "exploring"
   | "editing"
   | "verifying"
+  | "blocked"
+  | "recovering"
   | "waiting"
   | "error"
   | "complete"
@@ -16,6 +18,7 @@ export type SessionProgressEvent = {
   detailCount: number
   status: "done" | "active" | "error"
   text: string
+  source?: "agent" | "product" | "tool" | "text" | "fallback"
 }
 
 export type SessionProgressTodoItem = {
@@ -120,13 +123,17 @@ function assistantMessagesForProgress(messages: readonly Message[], messageID: s
 
 function userRequestForProgress(parts: readonly Part[]) {
   const text = parts
-    .filter((part) => part.type === "text")
+    .filter(isVisibleUserTextPart)
     .map((part) => part.text)
     .join("\n")
     .replace(/\s+/g, " ")
     .trim()
   if (!text) return
   return text
+}
+
+function isVisibleUserTextPart(part: Part): part is Extract<Part, { type: "text" }> {
+  return part.type === "text" && !part.synthetic && !part.ignored
 }
 
 function toolKind(tool: string) {
@@ -214,18 +221,27 @@ function progressEvents(input: {
   busy: boolean
   elapsedMs?: number
 }) {
-  const events = compactProgressEvents([
-    ...progressEventGroups(input.tools).map(
-      (group, index): SessionProgressEvent => ({
-        id: `${group.key}:${index}:${group.detailCount}`,
-        phase: group.phase,
-        detailCount: group.detailCount,
-        status: groupStatus(group.parts),
-        text: progressEventText(group),
-      }),
-    ),
-    ...progressTextEvents(input.parts),
-  ]).sort((a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id))
+  const toolEvents = progressEventGroups(input.tools).map(
+    (group, index): SessionProgressEvent => ({
+      id: `${group.key}:${index}:${group.detailCount}`,
+      phase: group.phase,
+      detailCount: group.detailCount,
+      status: groupStatus(group.parts),
+      text: progressEventText(group),
+      source: "tool",
+    }),
+  )
+  const textEvents = progressTextEvents(input.parts)
+  const agentEvents = textEvents.filter((event) => event.source === "agent")
+  if (agentEvents.length > 0) {
+    return compactProgressEvents(agentEvents).sort(
+      (a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id),
+    )
+  }
+
+  const events = compactProgressEvents([...toolEvents, ...textEvents]).sort(
+    (a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id),
+  )
   if (input.request && shouldUseProductProcess(input, events)) {
     return compactProgressEvents([
       ...productProcessEvents({
@@ -251,6 +267,7 @@ function progressEvents(input: {
       detailCount: 0,
       status: input.busy ? "active" : "done",
       text,
+      source: "fallback",
     }),
   )
 }
@@ -299,6 +316,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: "done",
       text: `我先把“${title}”理解成一个可以直接体验的作品，而不是只写一段说明。`,
+      source: "product",
     },
     {
       id: "product-process:planning",
@@ -306,6 +324,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: hasTools ? "done" : "active",
       text: `接下来会拆清楚玩法目标和核心结构：用户要做什么、页面上需要哪些区域、交互如何开始和结束。`,
+      source: "product",
     },
     {
       id: "product-process:editing",
@@ -313,6 +332,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: complete || hasVerifying ? "done" : "active",
       text: `然后我会把 ${artifact} 写成可运行的 HTML 作品，补上界面、交互逻辑、状态变化和基础视觉表现。`,
+      source: "product",
     },
     {
       id: "product-process:verifying",
@@ -320,6 +340,7 @@ function productProcessEvents(input: {
       detailCount: 0,
       status: complete ? "done" : "active",
       text: "最后会准备预览入口，让你能直接打开检查，而不是只看到一段完成描述。",
+      source: "product",
     },
   ]
 }
@@ -384,7 +405,7 @@ function toolEventGroupKey(part: ToolPart) {
 }
 
 function progressEventPhase(key: string, part: ToolPart): SessionProgressPhase {
-  if (key === "recovery") return "editing"
+  if (key === "recovery") return "recovering"
   if (part.state.status === "error" && !isRecoverableWriteFormatError(part)) return "error"
   return toolKind(part.tool)
 }
@@ -432,6 +453,14 @@ function progressTextEvents(parts: readonly Part[]) {
       }
       if (part.type !== "text") return state
 
+      const agentEvents = agentProgressEvents(part.text, state.toolCount, index)
+      if (agentEvents.length > 0) {
+        return {
+          events: [...state.events, ...agentEvents],
+          toolCount: state.toolCount,
+        }
+      }
+
       const text = progressTextNarrative(part.text)
       if (!text) return state
 
@@ -444,6 +473,7 @@ function progressTextEvents(parts: readonly Part[]) {
             detailCount: state.toolCount,
             status: "done",
             text,
+            source: "text",
           },
         ],
         toolCount: state.toolCount,
@@ -455,10 +485,65 @@ function progressTextEvents(parts: readonly Part[]) {
   return result.events
 }
 
+const progressEventTag = /<zingpop_progress\b([^>]*)>([\s\S]*?)<\/zingpop_progress>/gi
+
+function agentProgressEvents(text: string, toolCount: number, partIndex: number) {
+  return Array.from(text.matchAll(progressEventTag)).flatMap((match, index) => {
+    const content = readableProgressText(match[2] ?? "")
+    if (!content) return []
+    const attrs = match[1] ?? ""
+    const title = progressAttribute(attrs, "title")
+    const phase = progressPhaseAttribute(progressAttribute(attrs, "phase"))
+    const status = progressStatusAttribute(progressAttribute(attrs, "status"))
+
+    return [
+      {
+        id: `agent-progress:${partIndex}:${index}:${toolCount}`,
+        phase,
+        detailCount: toolCount,
+        status,
+        text: title ? `${title}：${content}` : content,
+        source: "agent",
+      } satisfies SessionProgressEvent,
+    ]
+  })
+}
+
+function progressAttribute(attrs: string, name: string) {
+  return attrs.match(new RegExp(`${name}=["']([^"']+)["']`, "i"))?.[1]?.trim()
+}
+
+function progressPhaseAttribute(value: string | undefined): SessionProgressPhase {
+  if (
+    value === "understanding" ||
+    value === "planning" ||
+    value === "exploring" ||
+    value === "editing" ||
+    value === "verifying" ||
+    value === "blocked" ||
+    value === "recovering" ||
+    value === "waiting" ||
+    value === "error" ||
+    value === "complete"
+  )
+    return value
+  return "understanding"
+}
+
+function progressStatusAttribute(value: string | undefined): SessionProgressEvent["status"] {
+  if (value === "active" || value === "done" || value === "error") return value
+  return "done"
+}
+
+function readableProgressText(value: string) {
+  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+}
+
 function progressTextNarrative(text: string) {
   const value = text.trim()
   const lower = value.toLowerCase()
-  if (!value || isCompletionProcessText(value) || isRawToolSummaryText(lower)) return
+  if (!value || value.includes("<zingpop_progress") || isCompletionProcessText(value) || isRawToolSummaryText(lower))
+    return
 
   const target = htmlTargetName(value)
   const targetSuffix = target ? ` ${target}` : ""

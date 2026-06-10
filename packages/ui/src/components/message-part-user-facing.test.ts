@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { Part as PartType } from "@opencode-ai/sdk/v2"
-import { userFacingTextPartKeys } from "./message-part-user-facing"
+import { stripZingpopProgressProtocol, userFacingTextPartKeys } from "./message-part-user-facing"
 
 function text(id: string, value: string) {
   return { id, type: "text", text: value } as PartType
@@ -20,6 +20,25 @@ function keys(parts: PartType[]) {
 }
 
 describe("user-facing assistant text filtering", () => {
+  test("hides structured Zingpop progress protocol text from assistant output", () => {
+    expect(
+      keys([
+        text(
+          "progress_1",
+          '<zingpop_progress phase="planning" status="active" title="拆解任务">我正在把需求拆成可执行步骤。</zingpop_progress>',
+        ),
+      ]),
+    ).toEqual(new Set())
+  })
+
+  test("keeps final answer text when it shares a part with progress protocol", () => {
+    const mixed =
+      '<zingpop_progress phase="complete" status="done" title="完成">我已经生成作品并准备好预览。</zingpop_progress>\n已完成，可以从预览面板打开 shooter.html。'
+
+    expect(stripZingpopProgressProtocol(mixed)).toBe("已完成，可以从预览面板打开 shooter.html。")
+    expect(keys([text("mixed", mixed)])).toEqual(new Set(["assistant_1:mixed"]))
+  })
+
   test("keeps the final plain assistant answer when no tools ran", () => {
     expect(keys([text("intro", "我先看一下"), text("final", "可以，已经完成。")])).toEqual(
       new Set(["assistant_1:final"]),

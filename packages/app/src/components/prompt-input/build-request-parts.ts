@@ -52,6 +52,29 @@ const parseCommentMentions = (comment: string) => {
 const isFileAttachment = (part: Prompt[number]): part is FileAttachmentPart => part.type === "file"
 const isAgentAttachment = (part: Prompt[number]): part is AgentPart => part.type === "agent"
 
+const progressProtocol = `
+<zingpop_progress_protocol>
+你需要像 Codex 一样持续展示用户能理解的工作过程，但不要暴露隐藏思维链。
+在关键节点用单独一行输出结构化进度事件：
+<zingpop_progress phase="understanding|planning|exploring|editing|verifying|blocked|recovering|waiting|error|complete" status="active|done|error" title="简短阶段标题">一句自然中文，说明当前正在如何推进、发现了什么、改了什么、验证到哪一步、卡在哪里或如何恢复。</zingpop_progress>
+开始调用工具前先输出 understanding 或 planning；读取、搜索或检查后输出 exploring；创建或修改文件时输出 editing；运行检查时输出 verifying；遇到技术限制或执行卡点时输出 blocked；换方案继续推进时输出 recovering；需要用户确认时输出 waiting；完成前输出 complete。
+这些事件是给产品界面展示的执行过程摘要，不是内部推理。不要解释这些标签。
+</zingpop_progress_protocol>
+`.trim()
+
+const progressProtocolPart = (text: string) => {
+  if (!text.trim() || text.includes("<zingpop_progress_protocol>")) return []
+  return [
+    {
+      id: Identifier.ascending("part"),
+      type: "text",
+      text: progressProtocol,
+      synthetic: true,
+      metadata: { zingpopProgressProtocol: true },
+    } satisfies PromptRequestPart,
+  ]
+}
+
 const toOptimisticPart = (part: PromptRequestPart, sessionID: string, messageID: string): Part => {
   if (part.type === "text") {
     return {
@@ -89,12 +112,14 @@ const toOptimisticPart = (part: PromptRequestPart, sessionID: string, messageID:
 }
 
 export function buildRequestParts(input: BuildRequestPartsInput) {
+  const userTextPart = {
+    id: Identifier.ascending("part"),
+    type: "text",
+    text: input.text,
+  } satisfies PromptRequestPart
   const requestParts: PromptRequestPart[] = [
-    {
-      id: Identifier.ascending("part"),
-      type: "text",
-      text: input.text,
-    },
+    userTextPart,
+    ...progressProtocolPart(input.text),
   ]
 
   const files = input.prompt.filter(isFileAttachment).map((attachment) => {

@@ -33,13 +33,15 @@ export function SessionProgressNarrative(props: {
   const visible = createMemo(() => narrative().busy || narrative().detailCount > 0)
   const statusText = createMemo(() => {
     if (narrative().phase === "error") return "遇到错误"
+    if (narrative().phase === "blocked") return "遇到卡点"
+    if (narrative().phase === "recovering") return "正在恢复"
     if (narrative().phase === "waiting") return "等待确认"
     if (narrative().busy) return "正在处理"
     return "已处理"
   })
-  const commandLabel = createMemo(() => {
+  const stepLabel = createMemo(() => {
     if (narrative().detailCount === 0) return
-    return narrative().busy ? `已运行 ${narrative().detailCount} 条命令` : `共运行 ${narrative().detailCount} 条命令`
+    return narrative().busy ? `已推进 ${narrative().detailCount} 步` : `共推进 ${narrative().detailCount} 步`
   })
 
   createEffect(() => {
@@ -63,11 +65,17 @@ export function SessionProgressNarrative(props: {
             >
               <span
                 class="size-1.5 shrink-0 rounded-full bg-text-weak data-[state=active]:bg-info data-[state=error]:bg-critical"
-                data-state={narrative().phase === "error" ? "error" : narrative().busy ? "active" : "complete"}
+                data-state={
+                  narrative().phase === "error" || narrative().phase === "blocked"
+                    ? "error"
+                    : narrative().busy
+                      ? "active"
+                      : "complete"
+                }
               />
               <span class="shrink-0">{statusText()}</span>
               <Show when={elapsedLabel(narrative().elapsedMs)}>{(label) => <span class="shrink-0">{label()}</span>}</Show>
-              <Show when={commandLabel()}>{(label) => <span class="min-w-0 truncate text-text-muted">{label()}</span>}</Show>
+              <Show when={stepLabel()}>{(label) => <span class="min-w-0 truncate text-text-muted">{label()}</span>}</Show>
               <Collapsible.Arrow class="ml-0.5 shrink-0 transition-transform group-data-[expanded]:rotate-180" />
             </Collapsible.Trigger>
           </div>
@@ -81,7 +89,7 @@ export function SessionProgressNarrative(props: {
                       <div class="inline-flex items-center gap-1.5 text-12-regular text-text-weak">
                         <Icon name="terminal" size="small" />
                         <span>
-                          {event.status === "active" ? "正在运行" : "已运行"} {event.detailCount} 条命令
+                          {event.status === "active" ? "正在处理" : "已完成"} {event.detailCount} 个操作
                         </span>
                       </div>
                     </Show>

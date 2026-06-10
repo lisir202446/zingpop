@@ -65,6 +65,55 @@ function userText(id: string, value: string): Part {
 }
 
 describe("session progress narrative", () => {
+  test("uses agent-authored structured progress events instead of inferred tool summaries", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        user_1: [userText("request_1", "帮我做一个枪战小游戏")],
+        assistant_1: [
+          text(
+            "agent_progress_1",
+            '<zingpop_progress phase="understanding" status="done" title="明确目标">我先把这个需求按可玩的版本拆开：玩家移动、射击、敌人生成、计分和失败重开。</zingpop_progress>',
+          ),
+          tool("read", "completed", { filePath: "shooter.html" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+
+    expect(narrative.events[0]?.text).toBe(
+      "明确目标：我先把这个需求按可玩的版本拆开：玩家移动、射击、敌人生成、计分和失败重开。",
+    )
+    expect(narrative.events.map((event) => event.text).join("\n")).not.toContain("zingpop_progress")
+    expect(narrative.events.map((event) => event.text).join("\n")).not.toContain("shooter.html")
+  })
+
+  test("parses blocked and recovering structured progress phases", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        assistant_1: [
+          text(
+            "agent_progress_1",
+            [
+              '<zingpop_progress phase="blocked" status="active" title="遇到卡点">写入方式受限，我正在换更稳定的生成方式。</zingpop_progress>',
+              '<zingpop_progress phase="recovering" status="active" title="恢复推进">我已经改用分段写入，继续补齐页面内容。</zingpop_progress>',
+            ].join("\n"),
+          ),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+
+    expect(narrative.events.map((event) => event.phase)).toEqual(["blocked", "recovering"])
+    expect(narrative.events.map((event) => event.text).join("\n")).toContain("遇到卡点")
+    expect(narrative.events.map((event) => event.text).join("\n")).toContain("恢复推进")
+  })
+
   test("starts with an understanding narrative when no tools have run", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
@@ -96,6 +145,23 @@ describe("session progress narrative", () => {
     expect(textValue).toContain("核心结构")
     expect(textValue).toContain("预览入口")
     expect(textValue).not.toBe("我正在生成作品内容，并准备可打开的预览入口。")
+  })
+
+  test("ignores synthetic progress protocol parts when deriving the user request", () => {
+    const protocol = userText("protocol_1", "<zingpop_progress_protocol>hidden</zingpop_progress_protocol>")
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user],
+      parts: {
+        user_1: [{ ...userText("request_1", "帮我做一个枪战小游戏"), synthetic: false } as Part, { ...protocol, synthetic: true } as Part],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(textValue).toContain("枪战小游戏")
+    expect(textValue).not.toContain("zingpop_progress_protocol")
   })
 
   test("keeps the product process visible when the model only says it is generating", () => {
@@ -447,7 +513,7 @@ describe("session progress narrative", () => {
     expect(text).not.toContain("修改")
   })
 
-  test("treats shell file creation as an editing progress step", () => {
+  test("treats shell file creation fallback as a recovering progress step", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
       messages: [user, assistant],
@@ -459,7 +525,7 @@ describe("session progress narrative", () => {
     })
 
     expect(narrative.events[0]).toMatchObject({
-      phase: "editing",
+      phase: "recovering",
       detailCount: 1,
     })
     expect(narrative.events[0]?.text).toContain("study-plan.html")

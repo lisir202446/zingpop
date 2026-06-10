@@ -5,12 +5,21 @@ type MessagePartRef = {
   part: PartType
 }
 
+export function stripZingpopProgressProtocol(text: string) {
+  return text
+    .replace(/<zingpop_progress_protocol\b[^>]*>[\s\S]*?<\/zingpop_progress_protocol>/gi, "")
+    .replace(/<zingpop_progress\b[^>]*>[\s\S]*?<\/zingpop_progress>/gi, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 function hasUserText(item: MessagePartRef) {
   return item.part.type === "text" && !!item.part.text?.trim()
 }
 
 function isProgressText(text: string) {
-  const value = text.trim()
+  const value = stripZingpopProgressProtocol(text)
   const lower = value.toLowerCase()
   if (!value) return true
   if (isCompletionText(value)) return false

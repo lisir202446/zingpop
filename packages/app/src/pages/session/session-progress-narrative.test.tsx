@@ -22,7 +22,9 @@ describe("SessionProgressNarrative", () => {
     expect(source).not.toContain("详细执行记录")
     expect(source).toContain('data-slot="session-progress-narrative-events"')
     expect(source).toContain('data-slot="session-progress-narrative-event"')
-    expect(source).toContain("已运行")
+    expect(source).toContain("已推进")
+    expect(source).toContain("个操作")
+    expect(source).not.toContain("条命令")
   })
 
   test("uses a Codex-like collapsible progress capsule by default", async () => {
@@ -36,6 +38,6 @@ describe("SessionProgressNarrative", () => {
     expect(source).toContain('aria-label={expanded() ? "收起处理过程" : "展开处理过程"}')
     expect(source).toContain('data-slot="session-progress-narrative-content"')
     expect(source).toContain("<Collapsible.Content")
-    expect(source).toContain("共运行")
+    expect(source).toContain("共推进")
   })
 })
