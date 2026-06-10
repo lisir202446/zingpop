@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 const config = await Bun.file(new URL("../../../../deploy/nginx/zingpop-app.conf", import.meta.url)).text()
+const wwwConfig = await Bun.file(new URL("../../../../deploy/nginx/zingpop-www.conf", import.meta.url)).text()
 
 function locationBlock(path: string) {
   const match = config.match(new RegExp(`location = ${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{[\\s\\S]*?\\n    \\}`))
@@ -90,5 +91,22 @@ describe("nginx workbench isolation", () => {
     expect(block).toContain('add_header Cache-Control "no-store";')
     expect(block).not.toContain("auth_request")
     expect(block).not.toContain("@zingpop_login")
+  })
+
+  test("enables transport compression and TLS session reuse on public hosts", () => {
+    for (const nginx of [config, wwwConfig]) {
+      expect(nginx).toContain("ssl_session_cache shared:ZingpopSSL:10m;")
+      expect(nginx).toContain("ssl_session_timeout 1d;")
+      expect(nginx).toContain("gzip on;")
+      expect(nginx).toContain("gzip_proxied any;")
+      expect(nginx).toContain("gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml text/xml;")
+    }
+  })
+
+  test("serves product static build assets directly from Nginx", () => {
+    expect(wwwConfig).toContain("location ^~ /_build/")
+    expect(wwwConfig).toContain("root /opt/zingpop/console/.output/public;")
+    expect(wwwConfig).toContain("try_files $uri =404;")
+    expect(wwwConfig).toContain('add_header Cache-Control "public, immutable";')
   })
 })
