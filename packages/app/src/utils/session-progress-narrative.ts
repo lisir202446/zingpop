@@ -226,8 +226,15 @@ function progressEvents(input: {
     ),
     ...progressTextEvents(input.parts),
   ]).sort((a, b) => a.detailCount - b.detailCount || a.id.localeCompare(b.id))
-  if (input.busy && input.tools.length === 0 && input.request && shouldUseProductProcess(events)) {
-    return productProcessEvents(input.request)
+  if (input.request && shouldUseProductProcess(input, events)) {
+    return compactProgressEvents([
+      ...productProcessEvents({
+        request: input.request,
+        phase: input.phase,
+        tools: input.tools,
+      }),
+      ...events,
+    ])
   }
   if (events.length > 0) return events
 
@@ -248,11 +255,18 @@ function progressEvents(input: {
   )
 }
 
-function shouldUseProductProcess(events: readonly SessionProgressEvent[]) {
+function shouldUseProductProcess(
+  input: {
+    request?: string
+    tools: readonly ToolPart[]
+    busy: boolean
+  },
+  events: readonly SessionProgressEvent[],
+) {
+  if (input.tools.length > 0) return isProductRequest(input.request)
   return (
-    events.length === 0 ||
-    events.length === 1 ||
-    events.every((event) => isGenericProductGenerationText(event.text))
+    input.busy &&
+    (events.length === 0 || events.length === 1 || events.every((event) => isGenericProductGenerationText(event.text)))
   )
 }
 
@@ -260,9 +274,23 @@ function isGenericProductGenerationText(value: string) {
   return value.includes("我正在生成") && value.includes("预览入口")
 }
 
-function productProcessEvents(request: string): SessionProgressEvent[] {
-  const title = productRequestTitle(request)
-  const artifact = productArtifactName(request)
+function isProductRequest(value: string | undefined) {
+  if (!value) return false
+  return /(做|制作|创建|生成|写|搭建|开发|实现).*(小游戏|游戏|工具|页面|网站|网页|HTML|作品|表格|计划|看板|应用|app)|小游戏|游戏|网页|网站|HTML|作品/i.test(
+    value,
+  )
+}
+
+function productProcessEvents(input: {
+  request: string
+  phase: SessionProgressPhase
+  tools: readonly ToolPart[]
+}): SessionProgressEvent[] {
+  const title = productRequestTitle(input.request)
+  const artifact = productArtifactName(input.request)
+  const hasTools = input.tools.length > 0
+  const hasVerifying = input.tools.some((part) => toolKind(part.tool) === "verifying")
+  const complete = input.phase === "complete"
 
   return [
     {
@@ -276,21 +304,21 @@ function productProcessEvents(request: string): SessionProgressEvent[] {
       id: "product-process:planning",
       phase: "planning",
       detailCount: 0,
-      status: "active",
+      status: hasTools ? "done" : "active",
       text: `接下来会拆清楚玩法目标和核心结构：用户要做什么、页面上需要哪些区域、交互如何开始和结束。`,
     },
     {
       id: "product-process:editing",
       phase: "editing",
       detailCount: 0,
-      status: "active",
+      status: complete || hasVerifying ? "done" : "active",
       text: `然后我会把 ${artifact} 写成可运行的 HTML 作品，补上界面、交互逻辑、状态变化和基础视觉表现。`,
     },
     {
       id: "product-process:verifying",
       phase: "verifying",
       detailCount: 0,
-      status: "active",
+      status: complete ? "done" : "active",
       text: "最后会准备预览入口，让你能直接打开检查，而不是只看到一段完成描述。",
     },
   ]

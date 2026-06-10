@@ -139,6 +139,30 @@ describe("session progress narrative", () => {
     expect(textValue).not.toBe("我正在生成 study-plan.html 内容，并准备可打开的预览入口。")
   })
 
+  test("keeps the product process visible after tool execution starts", () => {
+    const narrative = buildSessionProgressNarrative({
+      messageID: "user_1",
+      messages: [user, assistant],
+      parts: {
+        user_1: [userText("request_1", "帮我做一个枪战小游戏")],
+        assistant_1: [
+          tool("read", "completed", { filePath: "shooter.html" }),
+          tool("write", "running", { filePath: "shooter.html" }),
+        ],
+      },
+      status: { type: "busy" } as SessionStatus,
+      now: 6000,
+    })
+    const textValue = narrative.events.map((event) => event.text).join("\n")
+
+    expect(textValue).toContain("枪战小游戏")
+    expect(textValue).toContain("玩法目标")
+    expect(textValue).toContain("核心结构")
+    expect(textValue).toContain("可运行的 HTML")
+    expect(textValue).toContain("预览入口")
+    expect(textValue).toContain("shooter.html")
+  })
+
   test("explains long model waits before the first executable step appears", () => {
     const narrative = buildSessionProgressNarrative({
       messageID: "user_1",
