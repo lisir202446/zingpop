@@ -113,17 +113,20 @@ fi
 install -d /etc/nginx/snippets
 install -d /etc/nginx/sites-available
 install -d /etc/nginx/sites-enabled
+install -d /etc/nginx/conf.d
 
 if [[ -f "$ROOT_DIR/deploy/nginx/zingpop-app.conf" ]]; then
   install -m 644 "$ROOT_DIR/deploy/nginx/zingpop-app.conf" /etc/nginx/sites-available/zingpop-app.conf
-  ln -sfn /etc/nginx/sites-available/zingpop-app.conf /etc/nginx/sites-enabled/zingpop-app.conf
+  install -m 644 "$ROOT_DIR/deploy/nginx/zingpop-app.conf" /etc/nginx/conf.d/000-zingpop-app.conf
+  rm -f /etc/nginx/sites-enabled/zingpop-app.conf
 else
   echo "Missing deploy/nginx/zingpop-app.conf. App host Nginx config was not installed." >&2
 fi
 
 if [[ -f "$ROOT_DIR/deploy/nginx/zingpop-www.conf" ]]; then
   install -m 644 "$ROOT_DIR/deploy/nginx/zingpop-www.conf" /etc/nginx/sites-available/zingpop-www.conf
-  ln -sfn /etc/nginx/sites-available/zingpop-www.conf /etc/nginx/sites-enabled/zingpop-www.conf
+  install -m 644 "$ROOT_DIR/deploy/nginx/zingpop-www.conf" /etc/nginx/conf.d/000-zingpop-www.conf
+  rm -f /etc/nginx/sites-enabled/zingpop-www.conf
 else
   echo "Missing deploy/nginx/zingpop-www.conf. Product home Nginx config was not installed." >&2
 fi

@@ -49,12 +49,15 @@ describe("production bun install", () => {
 
     expect(install).toContain("/etc/nginx/sites-available")
     expect(install).toContain("/etc/nginx/sites-enabled")
+    expect(install).toContain("/etc/nginx/conf.d")
     expect(install).toContain("deploy/nginx/zingpop-app.conf")
     expect(install).toContain("deploy/nginx/zingpop-www.conf")
     expect(install).toContain("/etc/nginx/sites-available/zingpop-app.conf")
-    expect(install).toContain("/etc/nginx/sites-enabled/zingpop-app.conf")
+    expect(install).toContain("/etc/nginx/conf.d/000-zingpop-app.conf")
+    expect(install).toContain("rm -f /etc/nginx/sites-enabled/zingpop-app.conf")
     expect(install).toContain("/etc/nginx/sites-available/zingpop-www.conf")
-    expect(install).toContain("/etc/nginx/sites-enabled/zingpop-www.conf")
+    expect(install).toContain("/etc/nginx/conf.d/000-zingpop-www.conf")
+    expect(install).toContain("rm -f /etc/nginx/sites-enabled/zingpop-www.conf")
   })
 
   test("server deploy script falls back to GitHub codeload and verifies production UX", async () => {
