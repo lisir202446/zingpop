@@ -4,7 +4,7 @@ import type { DownloadPlatform } from "../types"
 const prodAssetNames: Record<string, string> = {
   "darwin-aarch64-dmg": "zingpop-desktop-mac-arm64.dmg",
   "darwin-x64-dmg": "zingpop-desktop-mac-x64.dmg",
-  "windows-x64-nsis": "zingpop-desktop-win-x64.exe",
+  "windows-x64-zip": "zingpop-desktop-win-x64.zip",
   "linux-x64-deb": "zingpop-desktop-linux-amd64.deb",
   "linux-x64-appimage": "zingpop-desktop-linux-x86_64.AppImage",
   "linux-x64-rpm": "zingpop-desktop-linux-x86_64.rpm",
@@ -13,7 +13,7 @@ const prodAssetNames: Record<string, string> = {
 const betaAssetNames: Record<string, string> = {
   "darwin-aarch64-dmg": "zingpop-desktop-mac-arm64.dmg",
   "darwin-x64-dmg": "zingpop-desktop-mac-x64.dmg",
-  "windows-x64-nsis": "zingpop-desktop-win-x64.exe",
+  "windows-x64-zip": "zingpop-desktop-win-x64.zip",
   "linux-x64-deb": "zingpop-desktop-linux-amd64.deb",
   "linux-x64-appimage": "zingpop-desktop-linux-x86_64.AppImage",
   "linux-x64-rpm": "zingpop-desktop-linux-x86_64.rpm",
@@ -23,7 +23,7 @@ const betaAssetNames: Record<string, string> = {
 const downloadNames: Record<string, string> = {
   "darwin-aarch64-dmg": "Zingpop Desktop.dmg",
   "darwin-x64-dmg": "Zingpop Desktop.dmg",
-  "windows-x64-nsis": "Zingpop Desktop Installer.exe",
+  "windows-x64-zip": "Zingpop Desktop Windows.zip",
 } satisfies { [K in DownloadPlatform]?: string }
 
 export async function GET({ params: { platform, channel } }: APIEvent) {
