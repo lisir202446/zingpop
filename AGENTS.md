@@ -12,6 +12,16 @@
 - Any change must preserve the existing opencode bottom-layer run path. Do not break `packages/opencode` CLI/server behavior, SDK generation, project/session/file routing, or desktop/web runtime assumptions.
 - If a required feature cannot be implemented without changing opencode core behavior, stop and explain the tradeoff before editing.
 
+## Zingpop Production Deploy Rules
+
+- Keep deploy sequencing strict: local changes/checks -> GitHub transport -> server build/install/restart -> server-side verification.
+- Do not make Huawei Cloud production deploys depend on `git fetch` from the server. The server's GitHub Git transport can be unstable; prefer GitHub codeload tarballs for exact commits when deploying or recovering.
+- Tarball/codeload sources do not include `.git`. Production builds from tarballs must set `OPENCODE_CHANNEL` and `OPENCODE_VERSION` explicitly so opencode build scripts do not fall back to `git branch --show-current`.
+- Do not ask the user to paste long heredoc deploy scripts into CloudShell. Use a short bootstrap command or split commands into small blocks; run long builds with `nohup` and a log file so CloudShell disconnects do not stop deployment.
+- If `bun install` hangs on the server, do not keep retrying the same install path. First verify whether existing server `node_modules` satisfies `scripts/production-bun-install.sh --verify-only`; if it does, deploy with `ZINGPOP_SKIP_BUN_INSTALL=1`.
+- Avoid copying Bun `node_modules` trees with `cp -a` as a rescue path because `.bun` link/cache directories can collide. Prefer using the existing repo checkout, a clean install, or symlinking existing `node_modules` only as a deliberate rescue step with verification before install/restart.
+- Production deployment is not complete until server-side evidence confirms the exact commit: `production-ux-probe` passes, `/opt/zingpop/app/dist/zingpop-build.json` matches the expected commit, Nginx validates/reloads, services restart, and the public app returns the expected auth redirect or page.
+
 ## Style Guide
 
 ### General Principles
