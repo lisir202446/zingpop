@@ -25,15 +25,20 @@ const channel = (() => {
   if (raw === "dev" || raw === "beta" || raw === "prod") return raw
   return "dev"
 })()
+const shouldSignWindows = process.env.GITHUB_ACTIONS === "true"
 
 const getBase = (): Configuration => ({
-  artifactName: "opencode-electron-${os}-${arch}.${ext}",
+  artifactName: "zingpop-desktop-${os}-${arch}.${ext}",
   directories: {
     output: "dist",
     buildResources: "resources",
   },
   files: ["out/**/*", "resources/**/*"],
   extraResources: [
+    {
+      from: "resources/icons",
+      to: "icons",
+    },
     {
       from: "native/",
       to: "native/",
@@ -54,14 +59,13 @@ const getBase = (): Configuration => ({
     sign: true,
   },
   protocols: {
-    name: "OpenCode",
-    schemes: ["opencode"],
+    name: "Zingpop",
+    schemes: ["zingpop", "opencode"],
   },
   win: {
     icon: `resources/icons/icon.ico`,
-    signtoolOptions: {
-      sign: signWindows,
-    },
+    signAndEditExecutable: shouldSignWindows,
+    signtoolOptions: shouldSignWindows ? { sign: signWindows } : undefined,
     target: ["nsis"],
   },
   nsis: {
@@ -84,29 +88,29 @@ function getConfig() {
     case "dev": {
       return {
         ...base,
-        appId: "ai.opencode.desktop.dev",
-        productName: "OpenCode Dev",
-        rpm: { packageName: "opencode-dev" },
+        appId: "cn.zingpop.desktop.dev",
+        productName: "Zingpop Dev",
+        rpm: { packageName: "zingpop-dev" },
       }
     }
     case "beta": {
       return {
         ...base,
-        appId: "ai.opencode.desktop.beta",
-        productName: "OpenCode Beta",
-        protocols: { name: "OpenCode Beta", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode-beta", channel: "latest" },
-        rpm: { packageName: "opencode-beta" },
+        appId: "cn.zingpop.desktop.beta",
+        productName: "Zingpop Beta",
+        protocols: { name: "Zingpop Beta", schemes: ["zingpop", "opencode"] },
+        publish: { provider: "github", owner: "lisir202446", repo: "zingpop", channel: "beta" },
+        rpm: { packageName: "zingpop-beta" },
       }
     }
     case "prod": {
       return {
         ...base,
-        appId: "ai.opencode.desktop",
-        productName: "OpenCode",
-        protocols: { name: "OpenCode", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode", channel: "latest" },
-        rpm: { packageName: "opencode" },
+        appId: "cn.zingpop.desktop",
+        productName: "Zingpop",
+        protocols: { name: "Zingpop", schemes: ["zingpop", "opencode"] },
+        publish: { provider: "github", owner: "lisir202446", repo: "zingpop", channel: "latest" },
+        rpm: { packageName: "zingpop" },
       }
     }
   }

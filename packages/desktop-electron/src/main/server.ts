@@ -1,4 +1,5 @@
 import { app } from "electron"
+import { join } from "node:path"
 import { DEFAULT_SERVER_URL_KEY, WSL_ENABLED_KEY } from "./constants"
 import { getUserShell, loadShellEnv } from "./shell-env"
 import { getStore } from "./store"
@@ -61,6 +62,7 @@ export async function spawnLocalServer(hostname: string, port: number, password:
 function prepareServerEnv(password: string) {
   const shell = process.platform === "win32" ? null : getUserShell()
   const shellEnv = shell ? (loadShellEnv(shell) ?? {}) : {}
+  const base = app.getPath("userData")
   const env = {
     ...process.env,
     ...shellEnv,
@@ -69,7 +71,10 @@ function prepareServerEnv(password: string) {
     OPENCODE_CLIENT: "desktop",
     OPENCODE_SERVER_USERNAME: "opencode",
     OPENCODE_SERVER_PASSWORD: password,
-    XDG_STATE_HOME: app.getPath("userData"),
+    XDG_DATA_HOME: join(base, "data"),
+    XDG_CONFIG_HOME: join(base, "config"),
+    XDG_CACHE_HOME: join(base, "cache"),
+    XDG_STATE_HOME: join(base, "state"),
   }
   Object.assign(process.env, env)
 }

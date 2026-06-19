@@ -1,13 +1,13 @@
 {
-  "name": "@opencode-ai/desktop-electron",
+  "name": "@zingpop/desktop-electron",
   "private": true,
   "version": "1.14.19",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://opencode.ai",
+  "homepage": "https://www.zingpop.cn",
   "author": {
-    "name": "OpenCode",
-    "email": "hello@opencode.ai"
+    "name": "Zingpop",
+    "email": "hello@zingpop.cn"
   },
   "scripts": {
     "typecheck": "tsgo -b",
@@ -17,10 +17,16 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "package": "electron-builder --config electron-builder.config.ts",
+    "package:prod": "bun ./scripts/package.ts",
     "package:mac": "electron-builder --mac --config electron-builder.config.ts",
+    "package:mac:prod": "bun ./scripts/package.ts --mac",
     "package:win": "electron-builder --win --config electron-builder.config.ts",
+    "package:win:prod": "bun ./scripts/package.ts --win",
     "package:linux": "electron-builder --linux --config electron-builder.config.ts",
-    "native:build": "bun install --cwd native"
+    "package:linux:prod": "bun ./scripts/package.ts --linux",
+    "native:build": "bun install --cwd native",
+    "smoke": "bun ./scripts/smoke.ts",
+    "smoke:5": "bun ./scripts/smoke.ts 5"
   },
   "main": "./out/main/index.js",
   "dependencies": {
@@ -30,6 +36,7 @@
     "electron-store": "^10",
     "electron-updater": "^6",
     "electron-window-state": "^5.0.3",
+    "jsonc-parser": "3.3.1",
     "drizzle-orm": "catalog:",
     "marked": "^15"
   },

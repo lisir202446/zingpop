@@ -1,6 +1,6 @@
-# OpenCode Desktop
+# Zingpop Desktop
 
-Native OpenCode desktop app, built with Tauri v2.
+Zingpop desktop app, built with Electron around the existing web workbench and embedded opencode server.
 
 ## Development
 
@@ -8,25 +8,29 @@ From the repo root:
 
 ```bash
 bun install
-bun run --cwd packages/desktop tauri dev
-```
-
-This starts the Vite dev server on http://localhost:1420 and opens the native window.
-
-If you only want the web dev server (no native shell):
-
-```bash
-bun run --cwd packages/desktop dev
+bun --cwd packages/desktop-electron dev
 ```
 
 ## Build
 
-To create a production `dist/` and build the native app bundle:
+To create a production renderer/main build:
 
 ```bash
-bun run --cwd packages/desktop tauri build
+bun --cwd packages/desktop-electron build
+```
+
+To create a Windows installer:
+
+```bash
+bun --cwd packages/desktop-electron package:win:prod
+```
+
+To smoke-test the built desktop app five times with isolated user data:
+
+```bash
+bun --cwd packages/desktop-electron smoke:5
 ```
 
 ## Prerequisites
 
-Running the desktop app requires additional Tauri dependencies (Rust toolchain, platform-specific libraries). See the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for setup instructions.
+Packaging requires Electron Builder dependencies for the target platform. The app starts the embedded opencode server locally and loads the Zingpop web workbench inside the native shell.
