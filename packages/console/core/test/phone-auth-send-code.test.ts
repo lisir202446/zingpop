@@ -17,15 +17,6 @@ beforeAll(() => {
     },
   }))
 
-  mock.module("../src/sms", () => ({
-    SMS: {
-      allowDevelopmentFallback: () => false,
-      sendLoginCode: async () => {
-        throw new Error("provider rejected template")
-      },
-    },
-  }))
-
   mock.module("../src/drizzle", () => ({
     and: (...values: unknown[]) => values,
     desc: (value: unknown) => value,

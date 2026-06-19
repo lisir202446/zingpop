@@ -45,7 +45,7 @@ export default function ThirdPartyDisclosures() {
               <td>支付服务</td>
               <td>充值、订阅、退款、对账和发票</td>
               <td>订单号、金额、支付状态、渠道流水号、发票必要信息</td>
-              <td>可能包括支付宝、微信支付、Stripe 或其他已接入渠道。</td>
+              <td>可能包括支付宝、微信支付或其他已接入渠道。</td>
             </tr>
             <tr>
               <td>邮件、客服和社群</td>
