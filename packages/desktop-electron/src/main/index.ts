@@ -24,14 +24,15 @@ const APP_NAMES: Record<string, string> = {
   prod: "Zingpop",
 }
 const APP_IDS: Record<string, string> = {
-  dev: "ai.opencode.desktop.dev",
-  beta: "ai.opencode.desktop.beta",
-  prod: "ai.opencode.desktop",
+  dev: "cn.zingpop.desktop.dev",
+  beta: "cn.zingpop.desktop.beta",
+  prod: "cn.zingpop.desktop",
 }
-const appId = app.isPackaged ? APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
+const appId = app.isPackaged ? APP_IDS[CHANNEL] : APP_IDS.dev
 app.setName(app.isPackaged ? APP_NAMES[CHANNEL] : "Zingpop Dev")
 app.setAppUserModelId(appId)
-app.setPath("userData", join(app.getPath("appData"), appId))
+app.setPath("userData", process.env.ZINGPOP_DESKTOP_USER_DATA ?? join(app.getPath("appData"), appId))
+configureDesktopDataEnv()
 const { autoUpdater } = pkg
 
 import type { InitStep, ServerReadyData, SqliteMigrationProgress, WslConfig } from "../preload/types"
@@ -60,6 +61,7 @@ let server: Server.Listener | null = null
 const loadingComplete = defer<void>()
 
 const pendingDeepLinks: string[] = []
+const deepLinkSchemes = ["zingpop", "opencode"] as const
 
 const serverReady = defer<ServerReadyData>()
 const logger = initLogging()
@@ -81,7 +83,7 @@ function setupApp() {
   }
 
   app.on("second-instance", (_event: Event, argv: string[]) => {
-    const urls = argv.filter((arg: string) => arg.startsWith("opencode://"))
+    const urls = argv.filter(isDeepLink)
     if (urls.length) {
       logger.log("deep link received via second-instance", { urls })
       emitDeepLinks(urls)
@@ -111,7 +113,7 @@ function setupApp() {
   }
 
   void app.whenReady().then(async () => {
-    app.setAsDefaultProtocolClient("opencode")
+    for (const scheme of deepLinkSchemes) app.setAsDefaultProtocolClient(scheme)
     registerRendererProtocol()
     setDockIcon()
     setupAutoUpdater()
@@ -212,8 +214,39 @@ async function initialize() {
 
   mainWindow = createMainWindow()
   wireMenu()
+  wireSmokeExit(mainWindow)
 
   overlay?.close()
+}
+
+function isDeepLink(value: string) {
+  return deepLinkSchemes.some((scheme) => value.startsWith(`${scheme}://`))
+}
+
+function configureDesktopDataEnv() {
+  const base = app.getPath("userData")
+  process.env.XDG_DATA_HOME = join(base, "data")
+  process.env.XDG_CONFIG_HOME = join(base, "config")
+  process.env.XDG_CACHE_HOME = join(base, "cache")
+  process.env.XDG_STATE_HOME = join(base, "state")
+}
+
+function wireSmokeExit(win: BrowserWindow) {
+  if (process.env.ZINGPOP_DESKTOP_SMOKE !== "1") return
+  const timeout = setTimeout(() => {
+    logger.error("desktop smoke timeout")
+    killSidecar()
+    app.exit(1)
+  }, Number.parseInt(process.env.ZINGPOP_DESKTOP_SMOKE_TIMEOUT_MS ?? "45000", 10))
+
+  win.webContents.once("did-finish-load", () => {
+    logger.log("desktop smoke ready")
+    clearTimeout(timeout)
+    setTimeout(() => {
+      killSidecar()
+      app.exit(0)
+    }, 500)
+  })
 }
 
 function wireMenu() {
@@ -316,13 +349,11 @@ async function getSidecarPort() {
 }
 
 function sqliteFileExists() {
-  const xdg = process.env.XDG_DATA_HOME
-  const base = xdg && xdg.length > 0 ? xdg : join(homedir(), ".local", "share")
-  return existsSync(join(base, "opencode", "opencode.db"))
+  return existsSync(join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), "opencode", "opencode.db"))
 }
 
 function setupAutoUpdater() {
-  if (!UPDATER_ENABLED) return
+  if (!isAutoUpdaterAvailable()) return
   autoUpdater.logger = logger
   autoUpdater.channel = "latest"
   autoUpdater.allowPrerelease = false
@@ -340,7 +371,7 @@ function setupAutoUpdater() {
 let updateReady = false
 
 async function checkUpdate() {
-  if (!UPDATER_ENABLED) return { updateAvailable: false }
+  if (!isAutoUpdaterAvailable()) return { updateAvailable: false }
   updateReady = false
   logger.log("checking for updates", {
     currentVersion: app.getVersion(),
@@ -382,7 +413,7 @@ async function installUpdate() {
 }
 
 async function checkForUpdates(alertOnFail: boolean) {
-  if (!UPDATER_ENABLED) return
+  if (!isAutoUpdaterAvailable()) return
   logger.log("checkForUpdates invoked", { alertOnFail })
   const result = await checkUpdate()
   if (!result.updateAvailable) {
@@ -422,6 +453,16 @@ async function checkForUpdates(alertOnFail: boolean) {
   if (response.response === 0) {
     await installUpdate()
   }
+}
+
+function isAutoUpdaterAvailable() {
+  if (!UPDATER_ENABLED) return false
+  if (process.env.ZINGPOP_DESKTOP_SMOKE === "1") return false
+  if (app.isPackaged && !existsSync(join(process.resourcesPath, "app-update.yml"))) {
+    logger.log("auto updater disabled", { reason: "missing app-update.yml" })
+    return false
+  }
+  return true
 }
 
 function delay(ms: number) {
