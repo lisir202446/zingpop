@@ -32,7 +32,7 @@ function getDownloadPlatform(os: OS): DownloadPlatform {
     case "macOS":
       return "darwin-aarch64-dmg"
     case "Windows":
-      return "windows-x64-nsis"
+      return "windows-x64-zip"
     case "Linux":
       return "linux-x64-deb"
     default:
@@ -167,7 +167,7 @@ export default function Download() {
                   </span>
                   <span>{i18n.t("download.platform.windowsX64")}</span>
                 </div>
-                <a href={language.route(getDownloadHref("windows-x64-nsis"))} data-component="action-button">
+                <a href={language.route(getDownloadHref("windows-x64-zip"))} data-component="action-button">
                   {i18n.t("download.action.download")}
                 </a>
               </div>
