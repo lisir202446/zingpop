@@ -216,6 +216,7 @@ async function initialize() {
   mainWindow = createMainWindow()
   wireMenu()
   wireSmokeExit(mainWindow)
+  scheduleBackgroundUpdateCheck()
 
   overlay?.close()
 }
@@ -248,6 +249,14 @@ function wireSmokeExit(win: BrowserWindow) {
       app.exit(0)
     }, 500)
   })
+}
+
+function scheduleBackgroundUpdateCheck() {
+  if (!UPDATER_ENABLED) return
+  const timer = setTimeout(() => {
+    void checkForUpdates(false)
+  }, Number.parseInt(process.env.ZINGPOP_DESKTOP_UPDATE_CHECK_DELAY_MS ?? "10000", 10))
+  timer.unref()
 }
 
 function wireMenu() {

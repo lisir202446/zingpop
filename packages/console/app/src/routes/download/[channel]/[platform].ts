@@ -34,6 +34,8 @@ const fallbackAssetNames: Record<string, string> = {
 } satisfies Partial<Record<DownloadPlatform, string>>
 
 export async function GET({ params: { platform, channel } }: APIEvent) {
+  if (channel !== "stable" && channel !== "beta") return new Response(null, { status: 404 })
+
   const assetName = channel === "stable" ? prodAssetNames[platform] : betaAssetNames[platform]
   if (!assetName) return new Response(null, { status: 404 })
 
