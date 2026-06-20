@@ -20,6 +20,7 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: { index: "src/main/index.ts" },
+        external: ["jsonc-parser", "opencode-web-ui.gen.ts"],
       },
       externalizeDeps: { include: [nodePtyPkg] },
     },

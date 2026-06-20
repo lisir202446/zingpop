@@ -28,9 +28,9 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
+            host: ubuntu-latest
           - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: windows-latest
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -63,8 +63,13 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
 
-      - name: Run unit tests
-        run: bun turbo test:ci
+      - name: Run unit tests (Linux)
+        if: runner.os != 'Windows'
+        run: bun turbo test:ci --filter='!@zingpop/desktop-electron'
+
+      - name: Run unit tests (Windows app surface)
+        if: runner.os == 'Windows'
+        run: bun turbo test:ci --filter=@opencode-ai/app --filter=@zingpop/desktop-electron
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
@@ -95,12 +100,13 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404
+            host: ubuntu-latest
           - name: windows
-            host: blacksmith-4vcpu-windows-2025
+            host: windows-latest
     runs-on: ${{ matrix.settings.host }}
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+      PLAYWRIGHT_BROWSER_CHANNEL: chrome
     defaults:
       run:
         shell: bash
@@ -132,12 +138,12 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
 
       - name: Install Playwright system dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.PLAYWRIGHT_BROWSER_CHANNEL == ''
         working-directory: packages/app
         run: bunx playwright install-deps chromium
 
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: steps.playwright-cache.outputs.cache-hit != 'true' && env.PLAYWRIGHT_BROWSER_CHANNEL == ''
         working-directory: packages/app
         run: bunx playwright install chromium
 

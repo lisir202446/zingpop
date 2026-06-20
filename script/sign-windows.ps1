@@ -10,6 +10,9 @@ if (-not $Path -or $Path.Count -eq 0) {
 }
 
 if ($env:GITHUB_ACTIONS -ne "true") {
+  if ($env:ZINGPOP_REQUIRE_WINDOWS_SIGNING -eq "true") {
+    throw "Windows signing was required, but this script is not running on GitHub Actions"
+  }
   Write-Host "Skipping Windows signing because this is not running on GitHub Actions"
   exit 0
 }
@@ -21,7 +24,11 @@ $vars = @{
 }
 
 if ($vars.Values | Where-Object { -not $_ }) {
-  Write-Host "Skipping Windows signing because Azure Artifact Signing is not configured"
+  $missing = $vars.GetEnumerator() | Where-Object { -not $_.Value } | ForEach-Object { $_.Key }
+  if ($env:ZINGPOP_REQUIRE_WINDOWS_SIGNING -eq "true") {
+    throw "Windows signing was required, but these Azure Artifact Signing values are missing: $($missing -join ', ')"
+  }
+  Write-Host "Skipping Windows signing because Azure Artifact Signing is not configured: $($missing -join ', ')"
   exit 0
 }
 

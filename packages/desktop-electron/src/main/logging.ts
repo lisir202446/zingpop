@@ -1,12 +1,17 @@
 import log from "electron-log/main.js"
+import { app } from "electron"
 import { readFileSync, readdirSync, statSync, unlinkSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { handleConsolePipeError } from "./logging-pipe"
 
 const MAX_LOG_AGE_DAYS = 7
 const TAIL_LINES = 1000
+let consolePipeSafetyInstalled = false
 
 export function initLogging() {
   log.transports.file.maxSize = 5 * 1024 * 1024
+  if (app.isPackaged) log.transports.console.level = false
+  ignoreBrokenConsolePipes()
   cleanup()
   return log
 }
@@ -37,4 +42,12 @@ function cleanup() {
       continue
     }
   }
+}
+
+function ignoreBrokenConsolePipes() {
+  if (consolePipeSafetyInstalled) return
+  consolePipeSafetyInstalled = true
+  ;[process.stdout, process.stderr].forEach((stream) => {
+    stream.on("error", handleConsolePipeError)
+  })
 }

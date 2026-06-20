@@ -32,7 +32,7 @@ function getDownloadPlatform(os: OS): DownloadPlatform {
     case "macOS":
       return "darwin-aarch64-dmg"
     case "Windows":
-      return "windows-x64-nsis"
+      return "windows-x64-exe"
     case "Linux":
       return "linux-x64-deb"
     default:
@@ -113,56 +113,9 @@ export default function Download() {
 
           <section data-component="download-section">
             <div data-component="section-label">
-              <span>[1]</span> {i18n.t("download.section.terminal")}
+              <span>[1]</span> {i18n.t("download.section.desktop")}
             </div>
             <div data-component="section-content">
-              <button
-                data-component="cli-row"
-                onClick={handleCopyClick("curl -fsSL https://opencode.ai/install | bash")}
-              >
-                <code>
-                  curl -fsSL https://<strong>opencode.ai/install</strong> | bash
-                </code>
-                <CopyStatus />
-              </button>
-              <button data-component="cli-row" onClick={handleCopyClick("npm i -g opencode-ai")}>
-                <code>
-                  npm i -g <strong>opencode-ai</strong>
-                </code>
-                <CopyStatus />
-              </button>
-              <button data-component="cli-row" onClick={handleCopyClick("bun add -g opencode-ai")}>
-                <code>
-                  bun add -g <strong>opencode-ai</strong>
-                </code>
-                <CopyStatus />
-              </button>
-              <button data-component="cli-row" onClick={handleCopyClick("brew install anomalyco/tap/opencode")}>
-                <code>
-                  brew install <strong>anomalyco/tap/opencode</strong>
-                </code>
-                <CopyStatus />
-              </button>
-              <button data-component="cli-row" onClick={handleCopyClick("paru -S opencode")}>
-                <code>
-                  paru -S <strong>opencode</strong>
-                </code>
-                <CopyStatus />
-              </button>
-            </div>
-          </section>
-
-          <section data-component="download-section">
-            <div data-component="section-label">
-              <span>[2]</span> {i18n.t("download.section.desktop")}
-            </div>
-            <div data-component="section-content">
-              <button data-component="cli-row" onClick={handleCopyClick("brew install --cask opencode-desktop")}>
-                <code>
-                  brew install --cask <strong>opencode-desktop</strong>
-                </code>
-                <CopyStatus />
-              </button>
               <div data-component="download-row">
                 <div data-component="download-info">
                   <span data-slot="icon">
@@ -214,7 +167,7 @@ export default function Download() {
                   </span>
                   <span>{i18n.t("download.platform.windowsX64")}</span>
                 </div>
-                <a href={language.route(getDownloadHref("windows-x64-nsis"))} data-component="action-button">
+                <a href={language.route(getDownloadHref("windows-x64-exe"))} data-component="action-button">
                   {i18n.t("download.action.download")}
                 </a>
               </div>
@@ -272,7 +225,7 @@ export default function Download() {
 
           <section data-component="download-section">
             <div data-component="section-label">
-              <span>[3]</span> {i18n.t("download.section.extensions")}
+              <span>[2]</span> {i18n.t("download.section.extensions")}
             </div>
             <div data-component="section-content">
               <div data-component="download-row">
@@ -378,7 +331,7 @@ export default function Download() {
 
           <section data-component="download-section">
             <div data-component="section-label">
-              <span>[4]</span> {i18n.t("download.section.integrations")}
+              <span>[3]</span> {i18n.t("download.section.integrations")}
             </div>
             <div data-component="section-content">
               <div data-component="download-row">
