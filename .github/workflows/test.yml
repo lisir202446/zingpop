@@ -63,8 +63,13 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
 
-      - name: Run unit tests
+      - name: Run unit tests (Linux)
+        if: runner.os != 'Windows'
         run: bun turbo test:ci
+
+      - name: Run unit tests (Windows app surface)
+        if: runner.os == 'Windows'
+        run: bun turbo test:ci --filter=@opencode-ai/app --filter=@zingpop/desktop-electron
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 

@@ -11,6 +11,7 @@
   },
   "scripts": {
     "typecheck": "tsgo -b",
+    "test:ci": "mkdir -p .artifacts/unit && bun test ./src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "predev": "bun ./scripts/predev.ts",
     "dev": "electron-vite dev",
     "prebuild": "bun ./scripts/prebuild.ts",
