@@ -40,6 +40,7 @@ jobs:
       OPENCODE_CHANNEL: ${{ inputs.channel == 'beta' && 'beta' || 'prod' }}
       OPENCODE_VERSION: ${{ inputs.version }}
       ZINGPOP_DESKTOP_VERSION: ${{ inputs.version }}
+      ZINGPOP_PACKAGED_APP_EXE: ${{ inputs.channel == 'beta' && 'Zingpop Beta.exe' || 'Zingpop.exe' }}
       ZINGPOP_RELEASE_CHANNEL: ${{ inputs.channel }}
       ZINGPOP_REQUIRE_WINDOWS_SIGNING: "true"
       ZINGPOP_UPDATE_YML: ${{ inputs.channel == 'beta' && 'beta.yml' || 'latest.yml' }}
@@ -49,7 +50,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Bun
-        uses: ./.github/actions/setup-bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -138,7 +141,7 @@ jobs:
           $installer = "$dist\zingpop-desktop-win-x64.exe"
           $blockmap = "$dist\zingpop-desktop-win-x64.exe.blockmap"
           $updateMetadata = "$dist\$env:ZINGPOP_UPDATE_YML"
-          $app = "$dist\win-unpacked\Zingpop.exe"
+          $app = "$dist\win-unpacked\$env:ZINGPOP_PACKAGED_APP_EXE"
 
           foreach ($path in @($installer, $blockmap, $updateMetadata, $app)) {
             if (-not (Test-Path $path)) {
@@ -172,3 +175,11 @@ jobs:
             packages/desktop-electron/dist/zingpop-desktop-win-x64.exe
             packages/desktop-electron/dist/zingpop-desktop-win-x64.exe.blockmap
             packages/desktop-electron/dist/*.yml
+
+      - name: Clean failed draft release
+        if: failure()
+        shell: pwsh
+        run: |
+          if ($env:ZINGPOP_RELEASE_TAG) {
+            gh release delete "$env:ZINGPOP_RELEASE_TAG" --repo "$env:GITHUB_REPOSITORY" --cleanup-tag --yes
+          }
