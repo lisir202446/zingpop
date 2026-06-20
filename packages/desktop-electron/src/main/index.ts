@@ -43,6 +43,7 @@ import { initLogging } from "./logging"
 import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
 import { getDefaultServerUrl, getWslConfig, setDefaultServerUrl, setWslConfig, spawnLocalServer } from "./server"
+import { shouldRunJsonMigration } from "./startup"
 import {
   createLoadingWindow,
   createMainWindow,
@@ -140,7 +141,7 @@ function setInitStep(step: InitStep) {
 }
 
 async function initialize() {
-  const needsMigration = !sqliteFileExists()
+  const needsMigration = shouldRunJsonMigration()
   const sqliteDone = needsMigration ? defer<void>() : undefined
   let overlay: BrowserWindow | null = null
 
@@ -346,10 +347,6 @@ async function getSidecarPort() {
       server.close(() => resolve(port))
     })
   })
-}
-
-function sqliteFileExists() {
-  return existsSync(join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), "opencode", "opencode.db"))
 }
 
 function setupAutoUpdater() {
