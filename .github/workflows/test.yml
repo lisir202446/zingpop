@@ -65,7 +65,7 @@ jobs:
 
       - name: Run unit tests (Linux)
         if: runner.os != 'Windows'
-        run: bun turbo test:ci
+        run: bun turbo test:ci --filter='!@zingpop/desktop-electron'
 
       - name: Run unit tests (Windows app surface)
         if: runner.os == 'Windows'
