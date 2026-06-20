@@ -101,6 +101,7 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+      PLAYWRIGHT_BROWSER_CHANNEL: chrome
     defaults:
       run:
         shell: bash
@@ -132,12 +133,12 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
 
       - name: Install Playwright system dependencies
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && env.PLAYWRIGHT_BROWSER_CHANNEL == ''
         working-directory: packages/app
         run: bunx playwright install-deps chromium
 
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: steps.playwright-cache.outputs.cache-hit != 'true' && env.PLAYWRIGHT_BROWSER_CHANNEL == ''
         working-directory: packages/app
         run: bunx playwright install chromium
 
