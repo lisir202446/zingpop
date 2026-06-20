@@ -352,8 +352,8 @@ async function getSidecarPort() {
 function setupAutoUpdater() {
   if (!isAutoUpdaterAvailable()) return
   autoUpdater.logger = logger
-  autoUpdater.channel = "latest"
-  autoUpdater.allowPrerelease = false
+  autoUpdater.channel = CHANNEL === "beta" ? "beta" : "latest"
+  autoUpdater.allowPrerelease = CHANNEL === "beta"
   autoUpdater.allowDowngrade = true
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
