@@ -2,6 +2,7 @@ import log from "electron-log/main.js"
 import { app } from "electron"
 import { readFileSync, readdirSync, statSync, unlinkSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { handleConsolePipeError } from "./logging-pipe"
 
 const MAX_LOG_AGE_DAYS = 7
 const TAIL_LINES = 1000
@@ -47,17 +48,6 @@ function ignoreBrokenConsolePipes() {
   if (consolePipeSafetyInstalled) return
   consolePipeSafetyInstalled = true
   ;[process.stdout, process.stderr].forEach((stream) => {
-    stream.on("error", (error) => {
-      if (isPipeError(error)) return
-      throw error
-    })
+    stream.on("error", handleConsolePipeError)
   })
-}
-
-function isPipeError(error: unknown) {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    (error as NodeJS.ErrnoException).code === "EPIPE"
-  )
 }
