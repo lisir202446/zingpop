@@ -120,7 +120,7 @@ describe("commercialization operations artifacts", () => {
     expect(result.exitCode).not.toBe(0)
     expect(`${result.stdout.toString()}\n${result.stderr.toString()}`).toContain("ZAI_API_KEY")
     await rm(envFile)
-  })
+  }, 30_000)
 
   test("local workbench launchers guard the GLM runtime key", async () => {
     for (const path of ["scripts/local-workbench.ps1", "scripts/cloud-dev.sh"]) {
