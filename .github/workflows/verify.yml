@@ -1,0 +1,57 @@
+name: Verify Zingpop surfaces
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --linker hoisted
+
+      - name: Verify Zingpop app behavior
+        working-directory: packages/app
+        run: |
+          bun test --preload ./happydom.ts \
+            src/pages/prompts-css.test.ts \
+            src/pages/prompts/labels.test.ts \
+            src/pages/session/session-progress-narrative-source.test.ts \
+            src/utils/local-folder-sync.test.ts \
+            src/utils/session-progress-narrative.test.ts \
+            src/utils/zingpop-host.test.ts
+
+      - name: Verify desktop behavior
+        working-directory: packages/desktop-electron
+        run: |
+          bun test \
+            src/main/logging.test.ts \
+            src/main/startup.test.ts
+
+      - name: Verify product and release contracts
+        run: |
+          bun scripts/verify-zingpop-user-experience.mjs
+          bun scripts/verify-zingpop-opencode-config.mjs
+          bun scripts/verify-zingpop-desktop-release.mjs
